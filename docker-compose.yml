@@ -1,14 +1,60 @@
 services:
-  stats-server:
-    ports:
-      - "9090:9090"
-
   stats-db:
     image: postgres:16.1
-
-  ewm-service:
+    container_name: stats-db
+    environment:
+      POSTGRES_DB: stats
+      POSTGRES_USER: stats
+      POSTGRES_PASSWORD: stats
     ports:
-      - "8080:8080"
+      - "6543:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stats -d stats"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  stats-server:
+    build:
+      context: .
+      dockerfile: stats/stats-server/Dockerfile
+    container_name: stats-server
+    depends_on:
+      stats-db:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://stats-db:5432/stats
+      SPRING_DATASOURCE_USERNAME: stats
+      SPRING_DATASOURCE_PASSWORD: stats
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
 
   ewm-db:
     image: postgres:16.1
+    container_name: ewm-db
+    environment:
+      POSTGRES_DB: ewm
+      POSTGRES_USER: ewm
+      POSTGRES_PASSWORD: ewm
+    ports:
+      - "6544:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ewm -d ewm"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  ewm-service:
+    # заглушка до реализации основного сервиса
+    image: alpine:3.19
+    command: ["sh","-c","echo 'ewm-service placeholder' && sleep 3600"]
+    depends_on:
+      ewm-db:
+        condition: service_healthy
+    # порт не нужен, сервис ничего не слушает
+    # ports:
+    #   - "8080:8080"
+    restart: unless-stopped
