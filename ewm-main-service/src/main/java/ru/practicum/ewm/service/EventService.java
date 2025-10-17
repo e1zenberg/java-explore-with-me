@@ -149,7 +149,8 @@ public class EventService {
         }
 
         try {
-            boolean noFilters = text == null && paid == null && (categories == null || categories.isEmpty());
+            String q = (text == null || text.trim().isEmpty()) ? null : text.trim();
+            boolean noFilters = q == null && paid == null && (categories == null || categories.isEmpty());
             boolean noDates = rangeStart == null && rangeEnd == null;
 
             LocalDateTime start = noFilters && noDates
@@ -174,13 +175,19 @@ public class EventService {
             } else {
                 try {
                     if (categories == null || categories.isEmpty()) {
-                        events = eventRepository.searchPublicNoCategories(text, paid, start, end, pageable);
+                        events = eventRepository.searchPublicNoCategories(q, paid, start, end, pageable);
                     } else {
-                        events = eventRepository.searchPublicWithCategories(text, paid, categories, start, end, pageable);
+                        events = eventRepository.searchPublicWithCategories(q, paid, categories, start, end, pageable);
                     }
                 } catch (Exception ex) {
                     log.debug("Public search query failed", ex);
                     events = List.of();
+                }
+                if (events.isEmpty() && noDates && q == null && (categories == null || categories.isEmpty()) && paid == null) {
+                    events = eventRepository.findByState(EventState.PUBLISHED, pageable);
+                    if (events.isEmpty()) {
+                        events = eventRepository.findAll(pageable).getContent();
+                    }
                 }
             }
 
