@@ -212,7 +212,9 @@ public class EventService {
         }
         if (dt.isBefore(LocalDateTime.now().plusHours(2))) {
             String where = creation ? "создания" : "редактирования";
-            throw new BadRequestException("Дата и время события не могут быть раньше, чем через 2 часа (проверка при " + where + ")");
+            throw new BadRequestException(
+                    "Дата и время события не могут быть раньше, чем через 2 часа (проверка при " + where + ")"
+            );
         }
     }
 

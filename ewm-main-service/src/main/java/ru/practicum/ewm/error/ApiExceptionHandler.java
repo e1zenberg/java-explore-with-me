@@ -71,10 +71,13 @@ public class ApiExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiError handleNoBody(HttpMessageNotReadableException ex) {
+        String msg = ex.getMessage() != null
+                ? ex.getMessage()
+                : "Тело запроса отсутствует или не читается.";
         return ApiError.builder()
                 .status("BAD_REQUEST")
                 .reason("Некорректный запрос.")
-                .message("Тело запроса отсутствует или не читается.")
+                .message(msg)
                 .timestamp(LocalDateTime.now())
                 .build();
     }
@@ -82,24 +85,12 @@ public class ApiExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
     public ApiError handleConflict(DataIntegrityViolationException ex) {
-        String msg = ex.getMostSpecificCause() == null
-                ? ex.getMessage()
-                : ex.getMostSpecificCause().getMessage();
+        String causeMsg = ex.getMostSpecificCause().getMessage();
+        String msg = (causeMsg != null) ? causeMsg : ex.getMessage();
         return ApiError.builder()
                 .status("CONFLICT")
                 .reason("Нарушение целостности данных.")
                 .message(msg)
-                .timestamp(LocalDateTime.now())
-                .build();
-    }
-
-    @ExceptionHandler(Exception.class)
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public ApiError handleOther(Exception ex) {
-        return ApiError.builder()
-                .status("INTERNAL_SERVER_ERROR")
-                .reason("Внутренняя ошибка сервера.")
-                .message(ex.getMessage())
                 .timestamp(LocalDateTime.now())
                 .build();
     }
