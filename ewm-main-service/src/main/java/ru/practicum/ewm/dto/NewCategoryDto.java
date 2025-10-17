@@ -2,7 +2,6 @@ package ru.practicum.ewm.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -15,10 +14,10 @@ import lombok.experimental.FieldDefaults;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE)
-public class NewCategoryDto {
-
-    @NotBlank(message = "Название категории не может быть пустым.")
-    @Size(max = 50, message = "Название категории слишком длинное.")
+@FieldDefaults(level = lombok.AccessLevel.PRIVATE)
+public class NewCategoryDto
+{
+    @NotBlank
+    @Size(max = 50)
     String name;
 }

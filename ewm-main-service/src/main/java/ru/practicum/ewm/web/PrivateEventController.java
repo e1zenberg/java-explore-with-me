@@ -2,7 +2,6 @@ package ru.practicum.ewm.web;
 
 import jakarta.validation.Valid;
 import java.util.List;
-import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.http.HttpStatus;
@@ -29,7 +28,7 @@ import ru.practicum.ewm.service.RequestService;
 @RestController
 @RequiredArgsConstructor
 @Validated
-@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+@FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
 @RequestMapping("/users/{userId}")
 public class PrivateEventController {
 
@@ -62,8 +61,7 @@ public class PrivateEventController {
     }
 
     @GetMapping("/events/{eventId}/requests")
-    public List<ParticipationRequestDto> eventRequests(@PathVariable Long userId,
-                                                       @PathVariable Long eventId) {
+    public List<ParticipationRequestDto> eventRequests(@PathVariable Long userId, @PathVariable Long eventId) {
         return requestService.getEventRequests(userId, eventId);
     }
 

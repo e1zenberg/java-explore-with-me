@@ -1,6 +1,13 @@
 package ru.practicum.ewm.dto;
 
-import lombok.*;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import lombok.experimental.FieldDefaults;
 
 @Getter
@@ -8,9 +15,16 @@ import lombok.experimental.FieldDefaults;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE)
-public class Location {
-
+@FieldDefaults(level = lombok.AccessLevel.PRIVATE)
+public class Location
+{
+    @NotNull
+    @DecimalMin(value = "-90.0")
+    @DecimalMax(value = "90.0")
     Double lat;
+
+    @NotNull
+    @DecimalMin(value = "-180.0")
+    @DecimalMax(value = "180.0")
     Double lon;
 }
