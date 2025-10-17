@@ -20,7 +20,7 @@ import ru.practicum.ewm.dto.EventShortDto;
 import ru.practicum.ewm.dto.NewEventDto;
 import ru.practicum.ewm.dto.UpdateEventAdminRequest;
 import ru.practicum.ewm.dto.UpdateEventUserRequest;
-import ru.practicum.ewm.error.BadRequestException;
+import ru.practicum.ewm.error.ConflictException;
 import ru.practicum.ewm.error.ForbiddenException;
 import ru.practicum.ewm.error.NotFoundException;
 import ru.practicum.ewm.mapper.EventMapper;
@@ -80,7 +80,7 @@ public class EventService {
             throw new NotFoundException("Событие не найдено для пользователя: " + eventId);
         }
         if (e.getState() == EventState.PUBLISHED) {
-            throw new ForbiddenException("Изменять можно только события в статусах PENDING или CANCELED");
+            throw new ConflictException("Опубликованное событие нельзя изменять");
         }
         if (dto.getEventDate() != null) {
             validateEventDateAtLeast2Hours(dto.getEventDate(), false);
@@ -113,14 +113,14 @@ public class EventService {
             switch (dto.getStateAction()) {
                 case "PUBLISH_EVENT" -> {
                     if (e.getState() != EventState.PENDING) {
-                        throw new ForbiddenException("Опубликовать можно только событие в статусе PENDING");
+                        throw new ConflictException("Опубликовать можно только событие в статусе PENDING");
                     }
                     e.setState(EventState.PUBLISHED);
                     e.setPublishedOn(LocalDateTime.now());
                 }
                 case "REJECT_EVENT" -> {
                     if (e.getState() == EventState.PUBLISHED) {
-                        throw new ForbiddenException("Нельзя отклонить уже опубликованное событие");
+                        throw new ConflictException("Нельзя отклонить уже опубликованное событие");
                     }
                     e.setState(EventState.CANCELED);
                 }
@@ -143,7 +143,10 @@ public class EventService {
                                             int from,
                                             int size,
                                             HttpServletRequest request) {
-        stats.hit(request);
+        try {
+            stats.hit(request);
+        } catch (Exception ex) {
+        }
 
         LocalDateTime start = rangeStart != null ? rangeStart : LocalDateTime.now();
         LocalDateTime end = rangeEnd != null ? rangeEnd : LocalDateTime.now().plusYears(100);
@@ -173,7 +176,10 @@ public class EventService {
 
     @Transactional(readOnly = true)
     public EventFullDto getPublicById(Long id, HttpServletRequest request) {
-        stats.hit(request);
+        try {
+            stats.hit(request);
+        } catch (Exception ex) {
+        }
         Event e = getOr404(id);
         if (e.getState() != EventState.PUBLISHED) {
             throw new NotFoundException("Событие не опубликовано: " + id);
@@ -204,11 +210,11 @@ public class EventService {
 
     private void validateEventDateAtLeast2Hours(LocalDateTime dt, boolean creation) {
         if (dt == null) {
-            throw new BadRequestException("Поле eventDate должно быть задано");
+            throw new ForbiddenException("Поле eventDate должно быть задано");
         }
         if (dt.isBefore(LocalDateTime.now().plusHours(2))) {
             String where = creation ? "создания" : "редактирования";
-            throw new BadRequestException(
+            throw new ForbiddenException(
                     "Дата и время события не могут быть раньше, чем через 2 часа (проверка при " + where + ")"
             );
         }
@@ -247,7 +253,11 @@ public class EventService {
             return Map.of();
         }
         Set<Long> ids = events.stream().map(Event::getId).collect(Collectors.toSet());
-        return stats.getViewsForEvents(ids, LocalDateTime.now().minusYears(5), LocalDateTime.now().plusYears(5));
+        try {
+            return stats.getViewsForEvents(ids, LocalDateTime.now().minusYears(5), LocalDateTime.now().plusYears(5));
+        } catch (Exception ex) {
+            return Map.of();
+        }
     }
 
     private Map<Long, Long> confirmedByEvent(List<Event> events) {
