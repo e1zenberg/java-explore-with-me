@@ -1,5 +1,8 @@
 package ru.practicum.ewm.service;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.stereotype.Service;
@@ -10,16 +13,19 @@ import ru.practicum.ewm.dto.ParticipationRequestDto;
 import ru.practicum.ewm.error.ConflictException;
 import ru.practicum.ewm.error.NotFoundException;
 import ru.practicum.ewm.mapper.RequestMapper;
-import ru.practicum.ewm.model.*;
+import ru.practicum.ewm.model.Event;
+import ru.practicum.ewm.model.EventState;
+import ru.practicum.ewm.model.ParticipationRequest;
+import ru.practicum.ewm.model.RequestStatus;
+import ru.practicum.ewm.model.User;
 import ru.practicum.ewm.repo.ParticipationRequestRepository;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
+import static lombok.AccessLevel.PRIVATE;
 
 @Service
 @RequiredArgsConstructor
-@FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
+@FieldDefaults(level = PRIVATE, makeFinal = true)
+@Transactional(readOnly = true)
 public class RequestService {
 
     ParticipationRequestRepository requestRepository;
@@ -40,12 +46,20 @@ public class RequestService {
         if (requestRepository.existsByEventIdAndRequesterId(eventId, userId)) {
             throw new ConflictException("Заявка уже существует");
         }
+
         long confirmed = requestRepository.countByEventIdAndStatus(eventId, RequestStatus.CONFIRMED);
         if (event.getParticipantLimit() != 0 && confirmed >= event.getParticipantLimit()) {
             throw new ConflictException("Лимит участников достигнут");
         }
 
-        RequestStatus status = (Boolean.TRUE.equals(event.getRequestModeration())) ? RequestStatus.PENDING : RequestStatus.CONFIRMED;
+        RequestStatus status;
+        if (event.getParticipantLimit() == 0) {
+            status = RequestStatus.CONFIRMED;
+        } else if (Boolean.TRUE.equals(event.getRequestModeration())) {
+            status = RequestStatus.PENDING;
+        } else {
+            status = RequestStatus.CONFIRMED;
+        }
 
         ParticipationRequest r = ParticipationRequest.builder()
                 .created(LocalDateTime.now())
@@ -53,11 +67,14 @@ public class RequestService {
                 .requester(requester)
                 .status(status)
                 .build();
+
         return RequestMapper.toDto(requestRepository.save(r));
     }
 
     public List<ParticipationRequestDto> getUserRequests(Long userId) {
-        return requestRepository.findAllByRequesterId(userId).stream().map(RequestMapper::toDto).toList();
+        return requestRepository.findAllByRequesterId(userId).stream()
+                .map(RequestMapper::toDto)
+                .toList();
     }
 
     @Transactional
@@ -73,14 +90,20 @@ public class RequestService {
 
     public List<ParticipationRequestDto> getEventRequests(Long userId, Long eventId) {
         Event e = eventService.getOr404(eventId);
-        if (!e.getInitiator().getId().equals(userId)) throw new NotFoundException("Событие не найдено для пользователя");
-        return requestRepository.findAllByEventId(eventId).stream().map(RequestMapper::toDto).toList();
+        if (!e.getInitiator().getId().equals(userId)) {
+            throw new NotFoundException("Событие не найдено для пользователя");
+        }
+        return requestRepository.findAllByEventId(eventId).stream()
+                .map(RequestMapper::toDto)
+                .toList();
     }
 
     @Transactional
     public EventRequestStatusUpdateResult updateStatuses(Long userId, Long eventId, EventRequestStatusUpdateRequest body) {
         Event e = eventService.getOr404(eventId);
-        if (!e.getInitiator().getId().equals(userId)) throw new NotFoundException("Событие не найдено для пользователя");
+        if (!e.getInitiator().getId().equals(userId)) {
+            throw new NotFoundException("Событие не найдено для пользователя");
+        }
         List<ParticipationRequest> requests = requestRepository.findAllByIdsAndEventId(body.getRequestIds(), eventId);
 
         List<ParticipationRequest> confirmed = new ArrayList<>();
@@ -93,12 +116,10 @@ public class RequestService {
             if ("CONFIRMED".equalsIgnoreCase(body.getStatus())) {
                 long count = requestRepository.countByEventIdAndStatus(eventId, RequestStatus.CONFIRMED);
                 if (e.getParticipantLimit() != 0 && count >= e.getParticipantLimit()) {
-                    r.setStatus(RequestStatus.REJECTED);
-                    rejected.add(r);
-                } else {
-                    r.setStatus(RequestStatus.CONFIRMED);
-                    confirmed.add(r);
+                    throw new ConflictException("Лимит участников достигнут");
                 }
+                r.setStatus(RequestStatus.CONFIRMED);
+                confirmed.add(r);
             } else if ("REJECTED".equalsIgnoreCase(body.getStatus())) {
                 r.setStatus(RequestStatus.REJECTED);
                 rejected.add(r);
