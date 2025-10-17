@@ -16,8 +16,7 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE)
-public class UpdateEventAdminRequest
-{
+public class UpdateEventAdminRequest {
     @Size(min = 20, max = 2000)
     String annotation;
 

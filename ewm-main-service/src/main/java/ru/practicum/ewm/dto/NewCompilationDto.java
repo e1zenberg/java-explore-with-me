@@ -16,8 +16,7 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE)
-public class NewCompilationDto
-{
+public class NewCompilationDto {
     List<Long> events;
 
     Boolean pinned;

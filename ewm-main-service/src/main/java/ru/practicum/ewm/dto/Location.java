@@ -16,8 +16,7 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE)
-public class Location
-{
+public class Location {
     @NotNull
     @DecimalMin(value = "-90.0")
     @DecimalMax(value = "90.0")

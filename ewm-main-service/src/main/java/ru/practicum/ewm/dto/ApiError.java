@@ -15,8 +15,7 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE)
-public class ApiError
-{
+public class ApiError {
     String status;
     String reason;
     String message;

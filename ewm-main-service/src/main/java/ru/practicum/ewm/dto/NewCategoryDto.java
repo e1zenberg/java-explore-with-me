@@ -15,8 +15,7 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE)
-public class NewCategoryDto
-{
+public class NewCategoryDto {
     @NotBlank
     @Size(max = 50)
     String name;
