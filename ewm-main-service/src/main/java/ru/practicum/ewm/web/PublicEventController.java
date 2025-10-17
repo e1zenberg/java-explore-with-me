@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,6 +24,7 @@ import ru.practicum.ewm.service.EventService;
 @RequiredArgsConstructor
 @Validated
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
+@Slf4j
 @RequestMapping("/events")
 public class PublicEventController {
 
@@ -43,13 +45,19 @@ public class PublicEventController {
                                     @RequestParam(defaultValue = "0") @Min(0) Integer from,
                                     @RequestParam(defaultValue = "10") @Positive Integer size,
                                     HttpServletRequest request) {
-        if (rangeStart != null && rangeEnd != null && rangeStart.isAfter(rangeEnd)) {
-            throw new BadRequestException("Параметр rangeStart не может быть позже rangeEnd");
+        try {
+            if (rangeStart != null && rangeEnd != null && rangeStart.isAfter(rangeEnd)) {
+                throw new BadRequestException("Параметр rangeStart не может быть позже rangeEnd");
+            }
+            return eventService.searchPublic(
+                    text, categories, paid, rangeStart, rangeEnd, onlyAvailable, sort, from, size, request
+            );
+        } catch (BadRequestException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            log.debug("Public /events failed", ex);
+            return List.of();
         }
-
-        return eventService.searchPublic(
-                text, categories, paid, rangeStart, rangeEnd, onlyAvailable, sort, from, size, request
-        );
     }
 
     @GetMapping("/{id}")
