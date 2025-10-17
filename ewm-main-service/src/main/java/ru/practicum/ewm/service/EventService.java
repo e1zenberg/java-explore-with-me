@@ -149,14 +149,18 @@ public class EventService {
         }
 
         try {
-            LocalDateTime start = rangeStart != null ? rangeStart : LocalDateTime.now();
-            LocalDateTime end = rangeEnd != null ? rangeEnd : LocalDateTime.now().plusYears(100);
+            boolean noFilters = text == null && paid == null && (categories == null || categories.isEmpty());
+            boolean noDates = rangeStart == null && rangeEnd == null;
+
+            LocalDateTime start = noFilters && noDates
+                    ? LocalDateTime.now().minusYears(100)
+                    : (rangeStart != null ? rangeStart : LocalDateTime.now());
+            LocalDateTime end = (rangeEnd != null) ? rangeEnd : LocalDateTime.now().plusYears(100);
 
             Sort springSort = "EVENT_DATE".equalsIgnoreCase(sort) ? Sort.by("eventDate").ascending() : Sort.unsorted();
             Pageable pageable = PageUtils.offsetPage(from, size, springSort);
 
             List<Event> events;
-            boolean noFilters = text == null && paid == null && (categories == null || categories.isEmpty());
             if (noFilters) {
                 events = eventRepository.findByStateAndEventDateBetween(
                         EventState.PUBLISHED, start, end, pageable
