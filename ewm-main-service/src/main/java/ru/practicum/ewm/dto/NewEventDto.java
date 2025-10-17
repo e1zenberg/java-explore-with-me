@@ -20,8 +20,7 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE)
-public class NewEventDto
-{
+public class NewEventDto {
     @NotBlank
     @Size(min = 20, max = 2000)
     String annotation;
