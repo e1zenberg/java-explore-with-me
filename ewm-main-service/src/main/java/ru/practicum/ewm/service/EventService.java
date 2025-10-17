@@ -191,7 +191,8 @@ public class EventService {
                 }
             }
 
-            if (Boolean.TRUE.equals(onlyAvailable)) {
+            boolean applyAvailabilityFilter = Boolean.TRUE.equals(onlyAvailable) && !(noFilters && noDates);
+            if (applyAvailabilityFilter) {
                 Map<Long, Long> confirmed = confirmedByEvent(events);
                 events = events.stream().filter(ev -> {
                     long conf = confirmed.getOrDefault(ev.getId(), 0L);
