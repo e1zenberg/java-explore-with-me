@@ -19,15 +19,30 @@ public interface EventRepository extends JpaRepository<Event, Long> {
           and (:text is null or lower(e.annotation) like lower(concat('%', :text, '%'))
                or lower(e.description) like lower(concat('%', :text, '%')))
           and (:paid is null or e.paid = :paid)
-          and (:categories is null or e.category.id in :categories)
           and e.eventDate between :start and :end
         """)
-    List<Event> searchPublic(String text,
-                             Boolean paid,
-                             List<Long> categories,
-                             LocalDateTime start,
-                             LocalDateTime end,
-                             Pageable pageable);
+    List<Event> searchPublicNoCategories(String text,
+                                         Boolean paid,
+                                         LocalDateTime start,
+                                         LocalDateTime end,
+                                         Pageable pageable);
+
+    @Query("""
+        select e
+        from Event e
+        where e.state = ru.practicum.ewm.model.EventState.PUBLISHED
+          and (:text is null or lower(e.annotation) like lower(concat('%', :text, '%'))
+               or lower(e.description) like lower(concat('%', :text, '%')))
+          and (:paid is null or e.paid = :paid)
+          and e.category.id in :categories
+          and e.eventDate between :start and :end
+        """)
+    List<Event> searchPublicWithCategories(String text,
+                                           Boolean paid,
+                                           List<Long> categories,
+                                           LocalDateTime start,
+                                           LocalDateTime end,
+                                           Pageable pageable);
 
     @Query("""
         select e

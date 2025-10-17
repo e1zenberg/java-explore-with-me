@@ -21,6 +21,7 @@ import ru.practicum.ewm.dto.EventShortDto;
 import ru.practicum.ewm.dto.NewEventDto;
 import ru.practicum.ewm.dto.UpdateEventAdminRequest;
 import ru.practicum.ewm.dto.UpdateEventUserRequest;
+import ru.practicum.ewm.error.BadRequestException;
 import ru.practicum.ewm.error.ConflictException;
 import ru.practicum.ewm.error.ForbiddenException;
 import ru.practicum.ewm.error.NotFoundException;
@@ -157,7 +158,12 @@ public class EventService {
         Sort springSort = "EVENT_DATE".equalsIgnoreCase(sort) ? Sort.by("eventDate").ascending() : Sort.unsorted();
         Pageable pageable = PageUtils.offsetPage(from, size, springSort);
 
-        List<Event> events = eventRepository.searchPublic(text, paid, categories, start, end, pageable);
+        List<Event> events;
+        if (categories == null || categories.isEmpty()) {
+            events = eventRepository.searchPublicNoCategories(text, paid, start, end, pageable);
+        } else {
+            events = eventRepository.searchPublicWithCategories(text, paid, categories, start, end, pageable);
+        }
 
         if (Boolean.TRUE.equals(onlyAvailable)) {
             Map<Long, Long> confirmed = confirmedByEvent(events);
@@ -214,11 +220,11 @@ public class EventService {
 
     private void validateEventDateAtLeast2Hours(LocalDateTime dt, boolean creation) {
         if (dt == null) {
-            throw new ForbiddenException("Поле eventDate должно быть задано");
+            throw new BadRequestException("Поле eventDate должно быть задано");
         }
         if (dt.isBefore(LocalDateTime.now().plusHours(2))) {
             String where = creation ? "создания" : "редактирования";
-            throw new ForbiddenException(
+            throw new BadRequestException(
                     "Дата и время события не могут быть раньше, чем через 2 часа (проверка при " + where + ")"
             );
         }

@@ -90,6 +90,14 @@ public class RequestService {
         if (!e.getInitiator().getId().equals(userId)) {
             throw new NotFoundException("Событие не найдено для пользователя");
         }
+
+        if ("CONFIRMED".equalsIgnoreCase(body.getStatus())) {
+            long confirmedCount = requestRepository.countByEventIdAndStatus(eventId, RequestStatus.CONFIRMED);
+            if (e.getParticipantLimit() != 0 && confirmedCount >= e.getParticipantLimit()) {
+                throw new ConflictException("Лимит участников достигнут");
+            }
+        }
+
         List<ParticipationRequest> requests = requestRepository.findAllByIdsAndEventId(body.getRequestIds(), eventId);
 
         List<ParticipationRequest> confirmed = new ArrayList<>();
