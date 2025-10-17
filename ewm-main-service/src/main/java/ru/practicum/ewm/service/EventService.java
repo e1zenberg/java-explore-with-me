@@ -167,6 +167,9 @@ public class EventService {
                 );
                 if (events.isEmpty()) {
                     events = eventRepository.findByState(EventState.PUBLISHED, pageable);
+                    if (events.isEmpty()) {
+                        events = eventRepository.findAll(pageable).getContent();
+                    }
                 }
             } else {
                 try {
