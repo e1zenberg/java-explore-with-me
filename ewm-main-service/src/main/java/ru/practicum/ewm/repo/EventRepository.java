@@ -13,6 +13,11 @@ public interface EventRepository extends JpaRepository<Event, Long> {
 
     List<Event> findAllByInitiator_Id(Long initiatorId, Pageable pageable);
 
+    List<Event> findByStateAndEventDateBetween(EventState state,
+                                               LocalDateTime start,
+                                               LocalDateTime end,
+                                               Pageable pageable);
+
     @Query("""
         select e
         from Event e
