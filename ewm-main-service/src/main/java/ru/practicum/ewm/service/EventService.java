@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -37,6 +38,7 @@ import ru.practicum.ewm.util.PageUtils;
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
+@Slf4j
 public class EventService {
 
     EventRepository eventRepository;
@@ -146,6 +148,7 @@ public class EventService {
         try {
             stats.hit(request);
         } catch (Exception ex) {
+            log.debug("Stats hit failed", ex);
         }
 
         LocalDateTime start = rangeStart != null ? rangeStart : LocalDateTime.now();
@@ -179,6 +182,7 @@ public class EventService {
         try {
             stats.hit(request);
         } catch (Exception ex) {
+            log.debug("Stats hit failed", ex);
         }
         Event e = getOr404(id);
         if (e.getState() != EventState.PUBLISHED) {
@@ -256,6 +260,7 @@ public class EventService {
         try {
             return stats.getViewsForEvents(ids, LocalDateTime.now().minusYears(5), LocalDateTime.now().plusYears(5));
         } catch (Exception ex) {
+            log.debug("Stats views failed", ex);
             return Map.of();
         }
     }
