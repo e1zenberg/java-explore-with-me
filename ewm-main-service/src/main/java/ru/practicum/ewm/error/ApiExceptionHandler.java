@@ -2,8 +2,6 @@ package ru.practicum.ewm.error;
 
 import jakarta.validation.ConstraintViolationException;
 import java.time.LocalDateTime;
-import lombok.AccessLevel;
-import lombok.experimental.FieldDefaults;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -16,7 +14,6 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import ru.practicum.ewm.dto.ApiError;
 
 @RestControllerAdvice
-@FieldDefaults(level = AccessLevel.PRIVATE)
 public class ApiExceptionHandler {
 
     @ExceptionHandler(BadRequestException.class)
@@ -47,6 +44,17 @@ public class ApiExceptionHandler {
         return ApiError.builder()
                 .status("NOT_FOUND")
                 .reason("Объект не найден.")
+                .message(ex.getMessage())
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ApiError handleConflict(ConflictException ex) {
+        return ApiError.builder()
+                .status("CONFLICT")
+                .reason("Нарушение целостности данных.")
                 .message(ex.getMessage())
                 .timestamp(LocalDateTime.now())
                 .build();
@@ -84,13 +92,24 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
-    public ApiError handleConflict(DataIntegrityViolationException ex) {
+    public ApiError handleDataIntegrity(DataIntegrityViolationException ex) {
         String causeMsg = ex.getMostSpecificCause().getMessage();
-        String msg = (causeMsg != null) ? causeMsg : ex.getMessage();
+        String msg = (causeMsg != null && !causeMsg.isBlank()) ? causeMsg : ex.getMessage();
         return ApiError.builder()
                 .status("CONFLICT")
                 .reason("Нарушение целостности данных.")
                 .message(msg)
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+
+    @ExceptionHandler(Exception.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public ApiError handleOther(Exception ex) {
+        return ApiError.builder()
+                .status("INTERNAL_SERVER_ERROR")
+                .reason("Внутренняя ошибка сервера.")
+                .message(ex.getMessage())
                 .timestamp(LocalDateTime.now())
                 .build();
     }
