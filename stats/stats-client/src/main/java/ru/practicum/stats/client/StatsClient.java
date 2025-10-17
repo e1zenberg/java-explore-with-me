@@ -49,11 +49,11 @@ public class StatsClient {
             }
         }
 
-        // true — не пере-энкодить уже корректные значения
-        URI requestUri = builder.build(true).toUri();
+        URI requestUri = builder.build().toUri();
 
         ResponseEntity<ViewStatsDto[]> resp = rest.getForEntity(requestUri, ViewStatsDto[].class);
         ViewStatsDto[] body = resp.getBody();
         return body == null ? Collections.emptyList() : Arrays.asList(body);
     }
+
 }

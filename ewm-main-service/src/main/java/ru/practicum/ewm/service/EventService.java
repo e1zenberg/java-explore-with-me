@@ -1,6 +1,7 @@
 package ru.practicum.ewm.service;
 
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.data.domain.Pageable;
@@ -8,6 +9,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.ewm.dto.*;
+import ru.practicum.ewm.error.BadRequestException;
 import ru.practicum.ewm.error.ForbiddenException;
 import ru.practicum.ewm.error.NotFoundException;
 import ru.practicum.ewm.mapper.EventMapper;
@@ -23,7 +25,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class EventService {
 
     EventRepository eventRepository;
@@ -69,7 +71,9 @@ public class EventService {
         if (e.getState() == EventState.PUBLISHED) {
             throw new ForbiddenException("Изменять можно только события в статусах PENDING или CANCELED");
         }
-        if (dto.getEventDate() != null) validateEventDateAtLeast2Hours(dto.getEventDate(), false);
+        if (dto.getEventDate() != null) {
+            validateEventDateAtLeast2Hours(dto.getEventDate(), false);
+        }
         Category cat = dto.getCategory() == null ? null : categoryService.getOr404(dto.getCategory());
         EventMapper.applyUserUpdate(e, dto, cat);
 
@@ -88,21 +92,25 @@ public class EventService {
     @Transactional
     public EventFullDto updateByAdmin(Long eventId, UpdateEventAdminRequest dto) {
         Event e = getOr404(eventId);
-        if (dto.getEventDate() != null) validateEventDateAtLeast2Hours(dto.getEventDate(), false);
+        if (dto.getEventDate() != null) {
+            validateEventDateAtLeast2Hours(dto.getEventDate(), false);
+        }
         Category cat = dto.getCategory() == null ? null : categoryService.getOr404(dto.getCategory());
         EventMapper.applyAdminUpdate(e, dto, cat);
 
         if (dto.getStateAction() != null) {
             switch (dto.getStateAction()) {
                 case "PUBLISH_EVENT" -> {
-                    if (e.getState() != EventState.PENDING)
+                    if (e.getState() != EventState.PENDING) {
                         throw new ForbiddenException("Опубликовать можно только событие в статусе PENDING");
+                    }
                     e.setState(EventState.PUBLISHED);
                     e.setPublishedOn(LocalDateTime.now());
                 }
                 case "REJECT_EVENT" -> {
-                    if (e.getState() == EventState.PUBLISHED)
+                    if (e.getState() == EventState.PUBLISHED) {
                         throw new ForbiddenException("Нельзя отклонить уже опубликованное событие");
+                    }
                     e.setState(EventState.CANCELED);
                 }
                 default -> throw new ForbiddenException("Недопустимое действие: " + dto.getStateAction());
@@ -124,16 +132,26 @@ public class EventService {
                                             int from,
                                             int size,
                                             HttpServletRequest request) {
+        // 1) диапазон дат
+        if (rangeStart != null && rangeEnd != null && rangeEnd.isBefore(rangeStart)) {
+            throw new BadRequestException("Параметр rangeEnd не может быть раньше rangeStart.");
+        }
+
+        // 2) лог хита в статистику
         stats.hit(request);
 
+        // 3) нормализация входных значений
         LocalDateTime start = rangeStart != null ? rangeStart : LocalDateTime.now();
         LocalDateTime end = rangeEnd != null ? rangeEnd : LocalDateTime.now().plusYears(100);
+        String q = (text == null || text.isBlank()) ? null : text;
 
-        // При сортировке по просмотрам — не сортируем в БД, отсортируем после расчёта вьюх
-        Sort springSort = "EVENT_DATE".equalsIgnoreCase(sort) ? Sort.by("eventDate").ascending() : Sort.unsorted();
+        // 4) пагинация/сортировка
+        Sort springSort = "EVENT_DATE".equalsIgnoreCase(sort)
+                ? Sort.by("eventDate").ascending()
+                : Sort.unsorted();
         Pageable pageable = PageUtils.offsetPage(from, size, springSort);
 
-        List<Event> events = eventRepository.searchPublic(text, paid, categories, start, end, pageable);
+        List<Event> events = eventRepository.searchPublic(q, paid, categories, start, end, pageable);
 
         if (Boolean.TRUE.equals(onlyAvailable)) {
             Map<Long, Long> confirmed = confirmedByEvent(events);
@@ -147,9 +165,10 @@ public class EventService {
 
         if ("VIEWS".equalsIgnoreCase(sort)) {
             result = result.stream()
-                    .sorted(Comparator.comparingLong(EventShortDto::getViews).reversed()) // по убыванию просмотров
+                    .sorted(Comparator.comparingLong(EventShortDto::getViews).reversed())
                     .toList();
         }
+
         return result;
     }
 
@@ -157,7 +176,9 @@ public class EventService {
     public EventFullDto getPublicById(Long id, HttpServletRequest request) {
         stats.hit(request);
         Event e = getOr404(id);
-        if (e.getState() != EventState.PUBLISHED) throw new NotFoundException("Событие не опубликовано: " + id);
+        if (e.getState() != EventState.PUBLISHED) {
+            throw new NotFoundException("Событие не опубликовано: " + id);
+        }
         return withFullViews(e);
     }
 
@@ -171,22 +192,25 @@ public class EventService {
                                           int size) {
         LocalDateTime start = rangeStart != null ? rangeStart : LocalDateTime.now().minusYears(100);
         LocalDateTime end = rangeEnd != null ? rangeEnd : LocalDateTime.now().plusYears(100);
-
         Pageable pageable = PageUtils.offsetPage(from, size, Sort.by("id").ascending());
         List<Event> events = eventRepository.searchAdmin(users, states, categories, start, end, pageable);
         return withFullViews(events);
     }
 
     public Event getOr404(Long id) {
-        return eventRepository.findById(id).orElseThrow(() -> new NotFoundException("Событие не найдено: " + id));
+        return eventRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Событие не найдено: " + id));
     }
 
     private void validateEventDateAtLeast2Hours(LocalDateTime dt, boolean creation) {
-        if (dt == null) throw new ForbiddenException("Поле eventDate должно быть задано");
+        if (dt == null) {
+            throw new ForbiddenException("Поле eventDate должно быть задано");
+        }
         if (dt.isBefore(LocalDateTime.now().plusHours(2))) {
-            // правило из спеки: не раньше, чем через 2 часа
             String where = creation ? "создания" : "редактирования";
-            throw new ForbiddenException("Дата и время события не могут быть раньше, чем через 2 часа (проверка при " + where + ")");
+            throw new ForbiddenException(
+                    "Дата и время события не могут быть раньше, чем через 2 часа (проверка при " + where + ")"
+            );
         }
     }
 
@@ -194,26 +218,38 @@ public class EventService {
         Map<Long, Long> views = viewsByEvent(events);
         Map<Long, Long> conf = confirmedByEvent(events);
         return events.stream()
-                .map(e -> EventMapper.toShortDto(e, views.getOrDefault(e.getId(), 0L), conf.getOrDefault(e.getId(), 0L)))
+                .map(e -> EventMapper.toShortDto(
+                        e,
+                        views.getOrDefault(e.getId(), 0L),
+                        conf.getOrDefault(e.getId(), 0L)))
                 .toList();
     }
 
     private EventFullDto withFullViews(Event e) {
         Map<Long, Long> views = viewsByEvent(List.of(e));
         Map<Long, Long> conf = confirmedByEvent(List.of(e));
-        return EventMapper.toFullDto(e, views.getOrDefault(e.getId(), 0L), conf.getOrDefault(e.getId(), 0L));
+        return EventMapper.toFullDto(
+                e,
+                views.getOrDefault(e.getId(), 0L),
+                conf.getOrDefault(e.getId(), 0L)
+        );
     }
 
     private List<EventFullDto> withFullViews(List<Event> events) {
         Map<Long, Long> views = viewsByEvent(events);
         Map<Long, Long> conf = confirmedByEvent(events);
         return events.stream()
-                .map(e -> EventMapper.toFullDto(e, views.getOrDefault(e.getId(), 0L), conf.getOrDefault(e.getId(), 0L)))
+                .map(e -> EventMapper.toFullDto(
+                        e,
+                        views.getOrDefault(e.getId(), 0L),
+                        conf.getOrDefault(e.getId(), 0L)))
                 .toList();
     }
 
     private Map<Long, Long> viewsByEvent(List<Event> events) {
-        if (events.isEmpty()) return Map.of();
+        if (events.isEmpty()) {
+            return Map.of();
+        }
         Set<Long> ids = events.stream().map(Event::getId).collect(Collectors.toSet());
         return stats.getViewsForEvents(ids, LocalDateTime.now().minusYears(5), LocalDateTime.now().plusYears(5));
     }

@@ -1,10 +1,11 @@
 package ru.practicum.ewm.mapper;
 
-import java.util.List;
-import java.util.Map;
 import ru.practicum.ewm.dto.CompilationDto;
 import ru.practicum.ewm.dto.EventShortDto;
 import ru.practicum.ewm.model.Compilation;
+
+import java.util.List;
+import java.util.Map;
 
 public final class CompilationMapper {
 
