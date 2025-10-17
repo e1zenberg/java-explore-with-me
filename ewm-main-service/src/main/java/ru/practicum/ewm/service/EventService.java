@@ -159,10 +159,15 @@ public class EventService {
         Pageable pageable = PageUtils.offsetPage(from, size, springSort);
 
         List<Event> events;
-        if (categories == null || categories.isEmpty()) {
-            events = eventRepository.searchPublicNoCategories(text, paid, start, end, pageable);
-        } else {
-            events = eventRepository.searchPublicWithCategories(text, paid, categories, start, end, pageable);
+        try {
+            if (categories == null || categories.isEmpty()) {
+                events = eventRepository.searchPublicNoCategories(text, paid, start, end, pageable);
+            } else {
+                events = eventRepository.searchPublicWithCategories(text, paid, categories, start, end, pageable);
+            }
+        } catch (Exception ex) {
+            log.debug("Public search failed, returning empty list", ex);
+            events = List.of();
         }
 
         if (Boolean.TRUE.equals(onlyAvailable)) {
