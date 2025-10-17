@@ -18,6 +18,8 @@ public interface EventRepository extends JpaRepository<Event, Long> {
                                                LocalDateTime end,
                                                Pageable pageable);
 
+    List<Event> findByState(EventState state, Pageable pageable);
+
     @Query("""
         select e
         from Event e

@@ -165,6 +165,9 @@ public class EventService {
                 events = eventRepository.findByStateAndEventDateBetween(
                         EventState.PUBLISHED, start, end, pageable
                 );
+                if (events.isEmpty()) {
+                    events = eventRepository.findByState(EventState.PUBLISHED, pageable);
+                }
             } else {
                 try {
                     if (categories == null || categories.isEmpty()) {
