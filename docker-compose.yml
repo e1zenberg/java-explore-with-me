@@ -48,13 +48,20 @@ services:
     restart: unless-stopped
 
   ewm-service:
-    # заглушка до реализации основного сервиса
-    image: alpine:3.19
-    command: ["sh","-c","echo 'ewm-service placeholder' && sleep 3600"]
+    build:
+      context: .
+      dockerfile: ewm-main-service/Dockerfile
+    container_name: ewm-service
     depends_on:
       ewm-db:
         condition: service_healthy
-    # порт не нужен, сервис ничего не слушает
-    # ports:
-    #   - "8080:8080"
+      stats-server:
+        condition: service_started
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://ewm-db:5432/ewm
+      SPRING_DATASOURCE_USERNAME: ewm
+      SPRING_DATASOURCE_PASSWORD: ewm
+      STATS_BASE_URL: http://stats-server:9090
+    ports:
+      - "8080:8080"
     restart: unless-stopped
