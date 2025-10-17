@@ -1,8 +1,5 @@
 package ru.practicum.ewm.service;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.stereotype.Service;
@@ -20,12 +17,13 @@ import ru.practicum.ewm.model.RequestStatus;
 import ru.practicum.ewm.model.User;
 import ru.practicum.ewm.repo.ParticipationRequestRepository;
 
-import static lombok.AccessLevel.PRIVATE;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-@FieldDefaults(level = PRIVATE, makeFinal = true)
-@Transactional(readOnly = true)
+@FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
 public class RequestService {
 
     ParticipationRequestRepository requestRepository;
@@ -46,20 +44,14 @@ public class RequestService {
         if (requestRepository.existsByEventIdAndRequesterId(eventId, userId)) {
             throw new ConflictException("Заявка уже существует");
         }
-
         long confirmed = requestRepository.countByEventIdAndStatus(eventId, RequestStatus.CONFIRMED);
         if (event.getParticipantLimit() != 0 && confirmed >= event.getParticipantLimit()) {
             throw new ConflictException("Лимит участников достигнут");
         }
 
-        RequestStatus status;
-        if (event.getParticipantLimit() == 0) {
-            status = RequestStatus.CONFIRMED;
-        } else if (Boolean.TRUE.equals(event.getRequestModeration())) {
-            status = RequestStatus.PENDING;
-        } else {
-            status = RequestStatus.CONFIRMED;
-        }
+        RequestStatus status = (Boolean.TRUE.equals(event.getRequestModeration()))
+                ? RequestStatus.PENDING
+                : RequestStatus.CONFIRMED;
 
         ParticipationRequest r = ParticipationRequest.builder()
                 .created(LocalDateTime.now())
@@ -67,14 +59,11 @@ public class RequestService {
                 .requester(requester)
                 .status(status)
                 .build();
-
         return RequestMapper.toDto(requestRepository.save(r));
     }
 
     public List<ParticipationRequestDto> getUserRequests(Long userId) {
-        return requestRepository.findAllByRequesterId(userId).stream()
-                .map(RequestMapper::toDto)
-                .toList();
+        return requestRepository.findAllByRequesterId(userId).stream().map(RequestMapper::toDto).toList();
     }
 
     @Transactional
@@ -93,9 +82,7 @@ public class RequestService {
         if (!e.getInitiator().getId().equals(userId)) {
             throw new NotFoundException("Событие не найдено для пользователя");
         }
-        return requestRepository.findAllByEventId(eventId).stream()
-                .map(RequestMapper::toDto)
-                .toList();
+        return requestRepository.findAllByEventId(eventId).stream().map(RequestMapper::toDto).toList();
     }
 
     @Transactional
@@ -104,6 +91,14 @@ public class RequestService {
         if (!e.getInitiator().getId().equals(userId)) {
             throw new NotFoundException("Событие не найдено для пользователя");
         }
+
+        if ("CONFIRMED".equalsIgnoreCase(body.getStatus())) {
+            long confirmedCount = requestRepository.countByEventIdAndStatus(eventId, RequestStatus.CONFIRMED);
+            if (e.getParticipantLimit() != 0 && confirmedCount >= e.getParticipantLimit()) {
+                throw new ConflictException("Лимит участников достигнут");
+            }
+        }
+
         List<ParticipationRequest> requests = requestRepository.findAllByIdsAndEventId(body.getRequestIds(), eventId);
 
         List<ParticipationRequest> confirmed = new ArrayList<>();
@@ -116,10 +111,12 @@ public class RequestService {
             if ("CONFIRMED".equalsIgnoreCase(body.getStatus())) {
                 long count = requestRepository.countByEventIdAndStatus(eventId, RequestStatus.CONFIRMED);
                 if (e.getParticipantLimit() != 0 && count >= e.getParticipantLimit()) {
-                    throw new ConflictException("Лимит участников достигнут");
+                    r.setStatus(RequestStatus.REJECTED);
+                    rejected.add(r);
+                } else {
+                    r.setStatus(RequestStatus.CONFIRMED);
+                    confirmed.add(r);
                 }
-                r.setStatus(RequestStatus.CONFIRMED);
-                confirmed.add(r);
             } else if ("REJECTED".equalsIgnoreCase(body.getStatus())) {
                 r.setStatus(RequestStatus.REJECTED);
                 rejected.add(r);

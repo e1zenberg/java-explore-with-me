@@ -20,7 +20,6 @@ import ru.practicum.ewm.dto.EventShortDto;
 import ru.practicum.ewm.dto.NewEventDto;
 import ru.practicum.ewm.dto.UpdateEventAdminRequest;
 import ru.practicum.ewm.dto.UpdateEventUserRequest;
-import ru.practicum.ewm.error.BadRequestException;
 import ru.practicum.ewm.error.ConflictException;
 import ru.practicum.ewm.error.ForbiddenException;
 import ru.practicum.ewm.error.NotFoundException;
@@ -35,11 +34,9 @@ import ru.practicum.ewm.repo.ParticipationRequestRepository;
 import ru.practicum.ewm.stats.StatsFacade;
 import ru.practicum.ewm.util.PageUtils;
 
-import static lombok.AccessLevel.PRIVATE;
-
 @Service
 @RequiredArgsConstructor
-@FieldDefaults(level = PRIVATE, makeFinal = true)
+@FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
 public class EventService {
 
     EventRepository eventRepository;
@@ -82,13 +79,12 @@ public class EventService {
         if (!Objects.equals(e.getInitiator().getId(), userId)) {
             throw new NotFoundException("Событие не найдено для пользователя: " + eventId);
         }
-        if (dto.getEventDate() != null) {
-            validateEventDateAtLeast2Hours(dto.getEventDate(), false);
-        }
         if (e.getState() == EventState.PUBLISHED) {
             throw new ConflictException("Изменять можно только события в статусах PENDING или CANCELED");
         }
-
+        if (dto.getEventDate() != null) {
+            validateEventDateAtLeast2Hours(dto.getEventDate(), false);
+        }
         Category cat = dto.getCategory() == null ? null : categoryService.getOr404(dto.getCategory());
         EventMapper.applyUserUpdate(e, dto, cat);
 
@@ -208,11 +204,11 @@ public class EventService {
 
     private void validateEventDateAtLeast2Hours(LocalDateTime dt, boolean creation) {
         if (dt == null) {
-            throw new BadRequestException("Поле eventDate должно быть задано");
+            throw new ForbiddenException("Поле eventDate должно быть задано");
         }
         if (dt.isBefore(LocalDateTime.now().plusHours(2))) {
             String where = creation ? "создания" : "редактирования";
-            throw new BadRequestException(
+            throw new ForbiddenException(
                     "Дата и время события не могут быть раньше, чем через 2 часа (проверка при " + where + ")"
             );
         }
