@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import ru.practicum.ewm.model.Event;
 import ru.practicum.ewm.model.EventState;
 
@@ -21,10 +22,10 @@ public interface EventRepository extends JpaRepository<Event, Long> {
           and (:paid is null or e.paid = :paid)
           and e.eventDate between :start and :end
         """)
-    List<Event> searchPublicNoCategories(String text,
-                                         Boolean paid,
-                                         LocalDateTime start,
-                                         LocalDateTime end,
+    List<Event> searchPublicNoCategories(@Param("text") String text,
+                                         @Param("paid") Boolean paid,
+                                         @Param("start") LocalDateTime start,
+                                         @Param("end") LocalDateTime end,
                                          Pageable pageable);
 
     @Query("""
@@ -37,11 +38,11 @@ public interface EventRepository extends JpaRepository<Event, Long> {
           and e.category.id in :categories
           and e.eventDate between :start and :end
         """)
-    List<Event> searchPublicWithCategories(String text,
-                                           Boolean paid,
-                                           List<Long> categories,
-                                           LocalDateTime start,
-                                           LocalDateTime end,
+    List<Event> searchPublicWithCategories(@Param("text") String text,
+                                           @Param("paid") Boolean paid,
+                                           @Param("categories") List<Long> categories,
+                                           @Param("start") LocalDateTime start,
+                                           @Param("end") LocalDateTime end,
                                            Pageable pageable);
 
     @Query("""
@@ -52,10 +53,10 @@ public interface EventRepository extends JpaRepository<Event, Long> {
           and (:categories is null or e.category.id in :categories)
           and e.eventDate between :start and :end
         """)
-    List<Event> searchAdmin(List<Long> users,
-                            List<EventState> states,
-                            List<Long> categories,
-                            LocalDateTime start,
-                            LocalDateTime end,
+    List<Event> searchAdmin(@Param("users") List<Long> users,
+                            @Param("states") List<EventState> states,
+                            @Param("categories") List<Long> categories,
+                            @Param("start") LocalDateTime start,
+                            @Param("end") LocalDateTime end,
                             Pageable pageable);
 }
