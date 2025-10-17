@@ -4,7 +4,9 @@ import ru.practicum.ewm.dto.ParticipationRequestDto;
 import ru.practicum.ewm.model.ParticipationRequest;
 
 public final class RequestMapper {
-    private RequestMapper() {}
+
+    private RequestMapper() {
+    }
 
     public static ParticipationRequestDto toDto(ParticipationRequest r) {
         return ParticipationRequestDto.builder()

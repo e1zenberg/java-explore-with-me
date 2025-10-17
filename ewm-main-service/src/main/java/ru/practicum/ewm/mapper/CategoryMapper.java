@@ -1,10 +1,13 @@
 package ru.practicum.ewm.mapper;
 
-import ru.practicum.ewm.dto.*;
-import ru.practicum.ewm.model.*;
+import ru.practicum.ewm.dto.CategoryDto;
+import ru.practicum.ewm.dto.NewCategoryDto;
+import ru.practicum.ewm.model.Category;
 
 public final class CategoryMapper {
-    private CategoryMapper() {}
+
+    private CategoryMapper() {
+    }
 
     public static CategoryDto toDto(Category c) {
         return CategoryDto.builder()

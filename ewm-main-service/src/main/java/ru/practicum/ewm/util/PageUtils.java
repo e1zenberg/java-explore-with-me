@@ -5,7 +5,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
 public final class PageUtils {
-    private PageUtils() {}
+
+    private PageUtils() {
+    }
 
     public static Pageable offsetPage(int from, int size, Sort sort) {
         int page = from / size;

@@ -1,15 +1,28 @@
 package ru.practicum.ewm.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import lombok.*;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import lombok.experimental.FieldDefaults;
 
-@Getter @Setter @Builder @NoArgsConstructor @AllArgsConstructor
-@FieldDefaults(level = lombok.AccessLevel.PRIVATE)
+import java.time.LocalDateTime;
+
+@Getter
+@Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class ApiError {
+
     String status;
     String reason;
     String message;
+
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    java.time.LocalDateTime timestamp;
+    LocalDateTime timestamp;
 }
