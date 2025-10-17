@@ -1,6 +1,7 @@
 package ru.practicum.ewm.error;
 
 import jakarta.validation.ConstraintViolationException;
+import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -13,8 +14,6 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import ru.practicum.ewm.dto.ApiError;
-
-import java.time.LocalDateTime;
 
 @RestControllerAdvice
 @FieldDefaults(level = AccessLevel.PRIVATE)
@@ -83,10 +82,13 @@ public class ApiExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
     public ApiError handleConflict(DataIntegrityViolationException ex) {
+        String msg = ex.getMostSpecificCause() == null
+                ? ex.getMessage()
+                : ex.getMostSpecificCause().getMessage();
         return ApiError.builder()
                 .status("CONFLICT")
                 .reason("Нарушение целостности данных.")
-                .message(ex.getMostSpecificCause() == null ? ex.getMessage() : ex.getMostSpecificCause().getMessage())
+                .message(msg)
                 .timestamp(LocalDateTime.now())
                 .build();
     }

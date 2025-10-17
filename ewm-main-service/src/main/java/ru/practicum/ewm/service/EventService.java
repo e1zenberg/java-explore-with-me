@@ -1,6 +1,14 @@
 package ru.practicum.ewm.service;
 
 import jakarta.servlet.http.HttpServletRequest;
+import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -8,20 +16,24 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.practicum.ewm.dto.*;
+import ru.practicum.ewm.dto.EventFullDto;
+import ru.practicum.ewm.dto.EventShortDto;
+import ru.practicum.ewm.dto.NewEventDto;
+import ru.practicum.ewm.dto.UpdateEventAdminRequest;
+import ru.practicum.ewm.dto.UpdateEventUserRequest;
 import ru.practicum.ewm.error.BadRequestException;
 import ru.practicum.ewm.error.ForbiddenException;
 import ru.practicum.ewm.error.NotFoundException;
 import ru.practicum.ewm.mapper.EventMapper;
-import ru.practicum.ewm.model.*;
+import ru.practicum.ewm.model.Category;
+import ru.practicum.ewm.model.Event;
+import ru.practicum.ewm.model.EventState;
+import ru.practicum.ewm.model.RequestStatus;
+import ru.practicum.ewm.model.User;
 import ru.practicum.ewm.repo.EventRepository;
 import ru.practicum.ewm.repo.ParticipationRequestRepository;
 import ru.practicum.ewm.stats.StatsFacade;
 import ru.practicum.ewm.util.PageUtils;
-
-import java.time.LocalDateTime;
-import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -132,20 +144,16 @@ public class EventService {
                                             int from,
                                             int size,
                                             HttpServletRequest request) {
-        // 1) диапазон дат
         if (rangeStart != null && rangeEnd != null && rangeEnd.isBefore(rangeStart)) {
             throw new BadRequestException("Параметр rangeEnd не может быть раньше rangeStart.");
         }
 
-        // 2) лог хита в статистику
         stats.hit(request);
 
-        // 3) нормализация входных значений
         LocalDateTime start = rangeStart != null ? rangeStart : LocalDateTime.now();
         LocalDateTime end = rangeEnd != null ? rangeEnd : LocalDateTime.now().plusYears(100);
         String q = (text == null || text.isBlank()) ? null : text;
 
-        // 4) пагинация/сортировка
         Sort springSort = "EVENT_DATE".equalsIgnoreCase(sort)
                 ? Sort.by("eventDate").ascending()
                 : Sort.unsorted();

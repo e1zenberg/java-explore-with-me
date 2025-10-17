@@ -1,18 +1,35 @@
 package ru.practicum.ewm.web;
 
+import jakarta.validation.Valid;
+import java.util.List;
+import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.*;
-import ru.practicum.ewm.dto.*;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+import ru.practicum.ewm.dto.EventFullDto;
+import ru.practicum.ewm.dto.EventRequestStatusUpdateRequest;
+import ru.practicum.ewm.dto.EventRequestStatusUpdateResult;
+import ru.practicum.ewm.dto.EventShortDto;
+import ru.practicum.ewm.dto.NewEventDto;
+import ru.practicum.ewm.dto.ParticipationRequestDto;
+import ru.practicum.ewm.dto.UpdateEventUserRequest;
 import ru.practicum.ewm.service.EventService;
 import ru.practicum.ewm.service.RequestService;
 
-import java.util.List;
-
 @RestController
 @RequiredArgsConstructor
-@FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
+@Validated
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @RequestMapping("/users/{userId}")
 public class PrivateEventController {
 
@@ -21,7 +38,7 @@ public class PrivateEventController {
 
     @PostMapping("/events")
     @ResponseStatus(HttpStatus.CREATED)
-    public EventFullDto create(@PathVariable Long userId, @RequestBody NewEventDto dto) {
+    public EventFullDto create(@PathVariable Long userId, @Valid @RequestBody NewEventDto dto) {
         return eventService.create(userId, dto);
     }
 
@@ -38,18 +55,22 @@ public class PrivateEventController {
     }
 
     @PatchMapping("/events/{eventId}")
-    public EventFullDto update(@PathVariable Long userId, @PathVariable Long eventId, @RequestBody UpdateEventUserRequest dto) {
+    public EventFullDto update(@PathVariable Long userId,
+                               @PathVariable Long eventId,
+                               @Valid @RequestBody UpdateEventUserRequest dto) {
         return eventService.updateByUser(userId, eventId, dto);
     }
 
     @GetMapping("/events/{eventId}/requests")
-    public List<ParticipationRequestDto> eventRequests(@PathVariable Long userId, @PathVariable Long eventId) {
+    public List<ParticipationRequestDto> eventRequests(@PathVariable Long userId,
+                                                       @PathVariable Long eventId) {
         return requestService.getEventRequests(userId, eventId);
     }
 
     @PatchMapping("/events/{eventId}/requests")
-    public EventRequestStatusUpdateResult updateStatuses(@PathVariable Long userId, @PathVariable Long eventId,
-                                                         @RequestBody EventRequestStatusUpdateRequest body) {
+    public EventRequestStatusUpdateResult updateStatuses(@PathVariable Long userId,
+                                                         @PathVariable Long eventId,
+                                                         @Valid @RequestBody EventRequestStatusUpdateRequest body) {
         return requestService.updateStatuses(userId, eventId, body);
     }
 
