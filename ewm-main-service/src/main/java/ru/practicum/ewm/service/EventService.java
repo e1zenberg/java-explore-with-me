@@ -20,7 +20,7 @@ import ru.practicum.ewm.dto.EventShortDto;
 import ru.practicum.ewm.dto.NewEventDto;
 import ru.practicum.ewm.dto.UpdateEventAdminRequest;
 import ru.practicum.ewm.dto.UpdateEventUserRequest;
-import ru.practicum.ewm.error.ConflictException;
+import ru.practicum.ewm.error.BadRequestException;
 import ru.practicum.ewm.error.ForbiddenException;
 import ru.practicum.ewm.error.NotFoundException;
 import ru.practicum.ewm.mapper.EventMapper;
@@ -80,7 +80,7 @@ public class EventService {
             throw new NotFoundException("Событие не найдено для пользователя: " + eventId);
         }
         if (e.getState() == EventState.PUBLISHED) {
-            throw new ConflictException("Изменять можно только события в статусах PENDING или CANCELED");
+            throw new ForbiddenException("Изменять можно только события в статусах PENDING или CANCELED");
         }
         if (dto.getEventDate() != null) {
             validateEventDateAtLeast2Hours(dto.getEventDate(), false);
@@ -113,14 +113,14 @@ public class EventService {
             switch (dto.getStateAction()) {
                 case "PUBLISH_EVENT" -> {
                     if (e.getState() != EventState.PENDING) {
-                        throw new ConflictException("Опубликовать можно только событие в статусе PENDING");
+                        throw new ForbiddenException("Опубликовать можно только событие в статусе PENDING");
                     }
                     e.setState(EventState.PUBLISHED);
                     e.setPublishedOn(LocalDateTime.now());
                 }
                 case "REJECT_EVENT" -> {
                     if (e.getState() == EventState.PUBLISHED) {
-                        throw new ConflictException("Нельзя отклонить уже опубликованное событие");
+                        throw new ForbiddenException("Нельзя отклонить уже опубликованное событие");
                     }
                     e.setState(EventState.CANCELED);
                 }
@@ -204,11 +204,11 @@ public class EventService {
 
     private void validateEventDateAtLeast2Hours(LocalDateTime dt, boolean creation) {
         if (dt == null) {
-            throw new ForbiddenException("Поле eventDate должно быть задано");
+            throw new BadRequestException("Поле eventDate должно быть задано");
         }
         if (dt.isBefore(LocalDateTime.now().plusHours(2))) {
             String where = creation ? "создания" : "редактирования";
-            throw new ForbiddenException(
+            throw new BadRequestException(
                     "Дата и время события не могут быть раньше, чем через 2 часа (проверка при " + where + ")"
             );
         }

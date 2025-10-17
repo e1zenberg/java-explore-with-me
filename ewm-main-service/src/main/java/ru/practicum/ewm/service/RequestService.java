@@ -49,9 +49,8 @@ public class RequestService {
             throw new ConflictException("Лимит участников достигнут");
         }
 
-        RequestStatus status = (Boolean.TRUE.equals(event.getRequestModeration()))
-                ? RequestStatus.PENDING
-                : RequestStatus.CONFIRMED;
+        boolean autoConfirm = Boolean.FALSE.equals(event.getRequestModeration()) || event.getParticipantLimit() == 0;
+        RequestStatus status = autoConfirm ? RequestStatus.CONFIRMED : RequestStatus.PENDING;
 
         ParticipationRequest r = ParticipationRequest.builder()
                 .created(LocalDateTime.now())
@@ -91,14 +90,6 @@ public class RequestService {
         if (!e.getInitiator().getId().equals(userId)) {
             throw new NotFoundException("Событие не найдено для пользователя");
         }
-
-        if ("CONFIRMED".equalsIgnoreCase(body.getStatus())) {
-            long confirmedCount = requestRepository.countByEventIdAndStatus(eventId, RequestStatus.CONFIRMED);
-            if (e.getParticipantLimit() != 0 && confirmedCount >= e.getParticipantLimit()) {
-                throw new ConflictException("Лимит участников достигнут");
-            }
-        }
-
         List<ParticipationRequest> requests = requestRepository.findAllByIdsAndEventId(body.getRequestIds(), eventId);
 
         List<ParticipationRequest> confirmed = new ArrayList<>();
