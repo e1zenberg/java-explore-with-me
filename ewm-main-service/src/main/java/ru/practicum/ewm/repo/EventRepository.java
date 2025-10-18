@@ -18,14 +18,14 @@ public interface EventRepository extends JpaRepository<Event, Long> {
                                                LocalDateTime end,
                                                Pageable pageable);
 
-    List<Event> findByState(EventState state, Pageable pageable);
-
     @Query("""
         select e
         from Event e
         where e.state = ru.practicum.ewm.model.EventState.PUBLISHED
-          and (:text is null or lower(e.annotation) like lower(concat('%', :text, '%'))
-               or lower(e.description) like lower(concat('%', :text, '%')))
+          and (:text is null or (
+                lower(e.annotation) like lower(concat('%', :text, '%'))
+             or lower(e.description) like lower(concat('%', :text, '%'))
+          ))
           and (:paid is null or e.paid = :paid)
           and e.eventDate between :start and :end
         """)
@@ -39,10 +39,12 @@ public interface EventRepository extends JpaRepository<Event, Long> {
         select e
         from Event e
         where e.state = ru.practicum.ewm.model.EventState.PUBLISHED
-          and (:text is null or lower(e.annotation) like lower(concat('%', :text, '%'))
-               or lower(e.description) like lower(concat('%', :text, '%')))
+          and (:text is null or (
+                lower(e.annotation) like lower(concat('%', :text, '%'))
+             or lower(e.description) like lower(concat('%', :text, '%'))
+          ))
           and (:paid is null or e.paid = :paid)
-          and e.category.id in :categories
+          and (coalesce(:categories, null) is null or e.category.id in :categories)
           and e.eventDate between :start and :end
         """)
     List<Event> searchPublicWithCategories(@Param("text") String text,
