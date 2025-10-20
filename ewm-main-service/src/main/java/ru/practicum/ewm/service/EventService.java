@@ -118,7 +118,6 @@ public class EventService {
                     if (e.getState() != EventState.PENDING) {
                         throw new ConflictException("Опубликовать можно только событие в статусе PENDING");
                     }
-                    // ВАЖНО: правило «минимум 1 час до начала»
                     if (e.getEventDate().isBefore(LocalDateTime.now().plusHours(1))) {
                         throw new ConflictException("Дата начала события должна быть не ранее чем через 1 час от публикации");
                     }
@@ -156,15 +155,9 @@ public class EventService {
             log.debug("Stats hit failed", ex);
         }
 
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime start;
-        LocalDateTime end;
-        if (rangeStart == null && rangeEnd == null) {
-            start = now;
-            end = now.plusYears(100);
-        } else {
-            start = rangeStart != null ? rangeStart : now;
-            end = rangeEnd != null ? rangeEnd : now.plusYears(100);
+        // Валидация, но без принудительной нормализации дат — оставляем null, если не заданы.
+        if (rangeStart != null && rangeEnd != null && rangeStart.isAfter(rangeEnd)) {
+            throw new BadRequestException("rangeStart не может быть позже rangeEnd");
         }
 
         boolean sortByViews = "VIEWS".equalsIgnoreCase(sort);
@@ -173,28 +166,21 @@ public class EventService {
         if (!needFullScan) {
             Sort springSort = Sort.by("eventDate").ascending();
             Pageable pageable = PageUtils.offsetPage(from, size, springSort);
+
             List<Event> page;
-            boolean noFilters = text == null && paid == null && (categories == null || categories.isEmpty());
-            if (noFilters) {
-                page = eventRepository.findByStateAndEventDateBetween(EventState.PUBLISHED, start, end, pageable);
-            } else if (categories == null || categories.isEmpty()) {
-                page = eventRepository.searchPublicNoCategories(text, paid, start, end, pageable);
+            if (categories == null || categories.isEmpty()) {
+                page = eventRepository.searchPublicNoCategories(text, paid, rangeStart, rangeEnd, pageable);
             } else {
-                page = eventRepository.searchPublicWithCategories(text, paid, categories, start, end, pageable);
+                page = eventRepository.searchPublicWithCategories(text, paid, categories, rangeStart, rangeEnd, pageable);
             }
             return withShortViews(page);
         }
 
-        List<Event> all;
-        boolean noFilters = text == null && paid == null && (categories == null || categories.isEmpty());
+        // Тяжёлая ветка: тянем все, затем фильтруем и сортируем вручную.
         Pageable unpaged = Pageable.unpaged();
-        if (noFilters) {
-            all = eventRepository.findByStateAndEventDateBetween(EventState.PUBLISHED, start, end, unpaged);
-        } else if (categories == null || categories.isEmpty()) {
-            all = eventRepository.searchPublicNoCategories(text, paid, start, end, unpaged);
-        } else {
-            all = eventRepository.searchPublicWithCategories(text, paid, categories, start, end, unpaged);
-        }
+        List<Event> all = (categories == null || categories.isEmpty())
+                ? eventRepository.searchPublicNoCategories(text, paid, rangeStart, rangeEnd, unpaged)
+                : eventRepository.searchPublicWithCategories(text, paid, categories, rangeStart, rangeEnd, unpaged);
 
         if (Boolean.TRUE.equals(onlyAvailable)) {
             Map<Long, Long> confirmed = confirmedByEvent(all);
@@ -244,10 +230,8 @@ public class EventService {
                                           LocalDateTime rangeEnd,
                                           int from,
                                           int size) {
-        LocalDateTime start = rangeStart != null ? rangeStart : LocalDateTime.now().minusYears(100);
-        LocalDateTime end = rangeEnd != null ? rangeEnd : LocalDateTime.now().plusYears(100);
         Pageable pageable = PageUtils.offsetPage(from, size, Sort.by("id").ascending());
-        List<Event> events = eventRepository.searchAdmin(users, states, categories, start, end, pageable);
+        List<Event> events = eventRepository.searchAdmin(users, states, categories, rangeStart, rangeEnd, pageable);
         return withFullViews(events);
     }
 

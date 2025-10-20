@@ -49,17 +49,12 @@ public class PublicEventController {
                                     @RequestParam(defaultValue = "10") @Positive int size,
                                     HttpServletRequest request) {
 
-        // Нормализация интервала времени по умолчанию
-        final LocalDateTime now = LocalDateTime.now();
-        final LocalDateTime start = (rangeStart != null) ? rangeStart : now;
-        final LocalDateTime end = (rangeEnd != null) ? rangeEnd : now.plusYears(100);
-
-        if (start.isAfter(end)) {
+        if (rangeStart != null && rangeEnd != null && rangeStart.isAfter(rangeEnd)) {
             throw new BadRequestException("Параметр rangeStart не может быть позже rangeEnd");
         }
 
         return eventService.searchPublic(
-                text, categories, paid, start, end, onlyAvailable, sort, from, size, request
+                text, categories, paid, rangeStart, rangeEnd, onlyAvailable, sort, from, size, request
         );
     }
 
