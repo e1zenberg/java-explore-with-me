@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
 import java.time.LocalDateTime;
 import java.util.List;
+import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
@@ -22,10 +23,10 @@ import ru.practicum.ewm.service.EventService;
 
 @RestController
 @RequiredArgsConstructor
-@Validated
-@FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
-@Slf4j
 @RequestMapping("/events")
+@Validated
+@Slf4j
+@FieldDefaults(makeFinal = true, level = AccessLevel.PRIVATE)
 public class PublicEventController {
 
     EventService eventService;
@@ -35,13 +36,19 @@ public class PublicEventController {
                                     @RequestParam(required = false) List<Long> categories,
                                     @RequestParam(required = false) Boolean paid,
                                     @RequestParam(required = false)
-                                    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime rangeStart,
+                                    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+                                    LocalDateTime rangeStart,
                                     @RequestParam(required = false)
-                                    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime rangeEnd,
-                                    @RequestParam(defaultValue = "false") boolean onlyAvailable,
-                                    @RequestParam(required = false, defaultValue = "EVENT_DATE") String sort,
-                                    @RequestParam(defaultValue = "0") @Min(0) int from,
-                                    @RequestParam(defaultValue = "10") @Positive int size,
+                                    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+                                    LocalDateTime rangeEnd,
+                                    @RequestParam(required = false, defaultValue = "false")
+                                    Boolean onlyAvailable,
+                                    @RequestParam(required = false)
+                                    String sort,
+                                    @RequestParam(defaultValue = "0") @Min(0)
+                                    int from,
+                                    @RequestParam(defaultValue = "10") @Positive
+                                    int size,
                                     HttpServletRequest request) {
         if (rangeStart != null && rangeEnd != null && rangeStart.isAfter(rangeEnd)) {
             throw new BadRequestException("Параметр rangeStart не может быть позже rangeEnd");
