@@ -38,10 +38,10 @@ public class PublicEventController {
                                     @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime rangeStart,
                                     @RequestParam(required = false)
                                     @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime rangeEnd,
-                                    @RequestParam(defaultValue = "false") Boolean onlyAvailable,
+                                    @RequestParam(defaultValue = "false") boolean onlyAvailable,
                                     @RequestParam(required = false, defaultValue = "EVENT_DATE") String sort,
-                                    @RequestParam(defaultValue = "0") @Min(0) Integer from,
-                                    @RequestParam(defaultValue = "10") @Positive Integer size,
+                                    @RequestParam(defaultValue = "0") @Min(0) int from,
+                                    @RequestParam(defaultValue = "10") @Positive int size,
                                     HttpServletRequest request) {
         if (rangeStart != null && rangeEnd != null && rangeStart.isAfter(rangeEnd)) {
             throw new BadRequestException("Параметр rangeStart не может быть позже rangeEnd");
