@@ -164,39 +164,59 @@ public class EventService {
             end = rangeEnd != null ? rangeEnd : now.plusYears(100);
         }
 
-        Sort springSort = "EVENT_DATE".equalsIgnoreCase(sort) ? Sort.by("eventDate").ascending() : Sort.unsorted();
-        Pageable pageable = PageUtils.offsetPage(from, size, springSort);
+        boolean sortByViews = "VIEWS".equalsIgnoreCase(sort);
+        boolean needFullScan = sortByViews || Boolean.TRUE.equals(onlyAvailable);
 
-        List<Event> events;
-        boolean noFilters = text == null && paid == null && (categories == null || categories.isEmpty());
-        if (noFilters) {
-            events = eventRepository.findByStateAndEventDateBetween(
-                    EventState.PUBLISHED, start, end, pageable
-            );
-        } else {
-            if (categories == null || categories.isEmpty()) {
-                events = eventRepository.searchPublicNoCategories(text, paid, start, end, pageable);
+        if (!needFullScan) {
+            Sort springSort = Sort.by("eventDate").ascending();
+            Pageable pageable = PageUtils.offsetPage(from, size, springSort);
+            List<Event> page;
+            boolean noFilters = text == null && paid == null && (categories == null || categories.isEmpty());
+            if (noFilters) {
+                page = eventRepository.findByStateAndEventDateBetween(EventState.PUBLISHED, start, end, pageable);
+            } else if (categories == null || categories.isEmpty()) {
+                page = eventRepository.searchPublicNoCategories(text, paid, start, end, pageable);
             } else {
-                events = eventRepository.searchPublicWithCategories(text, paid, categories, start, end, pageable);
+                page = eventRepository.searchPublicWithCategories(text, paid, categories, start, end, pageable);
             }
+            return withShortViews(page);
+        }
+
+        List<Event> all;
+        boolean noFilters = text == null && paid == null && (categories == null || categories.isEmpty());
+        Pageable unpaged = Pageable.unpaged();
+        if (noFilters) {
+            all = eventRepository.findByStateAndEventDateBetween(EventState.PUBLISHED, start, end, unpaged);
+        } else if (categories == null || categories.isEmpty()) {
+            all = eventRepository.searchPublicNoCategories(text, paid, start, end, unpaged);
+        } else {
+            all = eventRepository.searchPublicWithCategories(text, paid, categories, start, end, unpaged);
         }
 
         if (Boolean.TRUE.equals(onlyAvailable)) {
-            Map<Long, Long> confirmed = confirmedByEvent(events);
-            events = events.stream().filter(ev -> {
+            Map<Long, Long> confirmed = confirmedByEvent(all);
+            all = all.stream().filter(ev -> {
                 long conf = confirmed.getOrDefault(ev.getId(), 0L);
                 return ev.getParticipantLimit() == 0 || conf < ev.getParticipantLimit();
             }).toList();
         }
 
-        List<EventShortDto> result = withShortViews(events);
-
-        if ("VIEWS".equalsIgnoreCase(sort)) {
-            result = result.stream()
-                    .sorted(Comparator.comparingLong(EventShortDto::getViews).reversed())
+        if (sortByViews) {
+            Map<Long, Long> viewsMap = viewsByEvent(all);
+            all = all.stream()
+                    .sorted(Comparator
+                            .comparingLong((Event ev) -> viewsMap.getOrDefault(ev.getId(), 0L))
+                            .reversed()
+                            .thenComparing(Event::getEventDate))
                     .toList();
+        } else {
+            all = all.stream().sorted(Comparator.comparing(Event::getEventDate)).toList();
         }
-        return result;
+
+        int startIndex = Math.min(from, all.size());
+        int endIndex = Math.min(startIndex + size, all.size());
+        List<Event> slice = all.subList(startIndex, endIndex);
+        return withShortViews(slice);
     }
 
     @Transactional(readOnly = true)
@@ -223,7 +243,6 @@ public class EventService {
                                           int size) {
         LocalDateTime start = rangeStart != null ? rangeStart : LocalDateTime.now().minusYears(100);
         LocalDateTime end = rangeEnd != null ? rangeEnd : LocalDateTime.now().plusYears(100);
-
         Pageable pageable = PageUtils.offsetPage(from, size, Sort.by("id").ascending());
         List<Event> events = eventRepository.searchAdmin(users, states, categories, start, end, pageable);
         return withFullViews(events);
