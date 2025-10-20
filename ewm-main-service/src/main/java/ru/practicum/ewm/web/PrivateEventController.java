@@ -1,6 +1,8 @@
 package ru.practicum.ewm.web;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Positive;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -43,8 +45,8 @@ public class PrivateEventController {
 
     @GetMapping("/events")
     public List<EventShortDto> myEvents(@PathVariable Long userId,
-                                        @RequestParam(defaultValue = "0") Integer from,
-                                        @RequestParam(defaultValue = "10") Integer size) {
+                                        @RequestParam(defaultValue = "0") @Min(0) Integer from,
+                                        @RequestParam(defaultValue = "10") @Positive Integer size) {
         return eventService.getUserEvents(userId, from, size);
     }
 
