@@ -29,6 +29,8 @@ import ru.practicum.ewm.service.EventService;
 @FieldDefaults(makeFinal = true, level = AccessLevel.PRIVATE)
 public class PublicEventController {
 
+    static final String DATE_TIME_PATTERN = "yyyy-MM-dd HH:mm:ss";
+
     EventService eventService;
 
     @GetMapping
@@ -36,25 +38,28 @@ public class PublicEventController {
                                     @RequestParam(required = false) List<Long> categories,
                                     @RequestParam(required = false) Boolean paid,
                                     @RequestParam(required = false)
-                                    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+                                    @DateTimeFormat(pattern = DATE_TIME_PATTERN)
                                     LocalDateTime rangeStart,
                                     @RequestParam(required = false)
-                                    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+                                    @DateTimeFormat(pattern = DATE_TIME_PATTERN)
                                     LocalDateTime rangeEnd,
-                                    @RequestParam(required = false, defaultValue = "false")
-                                    Boolean onlyAvailable,
-                                    @RequestParam(required = false)
-                                    String sort,
-                                    @RequestParam(defaultValue = "0") @Min(0)
-                                    int from,
-                                    @RequestParam(defaultValue = "10") @Positive
-                                    int size,
+                                    @RequestParam(defaultValue = "false") boolean onlyAvailable,
+                                    @RequestParam(required = false, defaultValue = "EVENT_DATE") String sort,
+                                    @RequestParam(defaultValue = "0") @Min(0) int from,
+                                    @RequestParam(defaultValue = "10") @Positive int size,
                                     HttpServletRequest request) {
-        if (rangeStart != null && rangeEnd != null && rangeStart.isAfter(rangeEnd)) {
+
+        // Нормализация интервала времени по умолчанию
+        final LocalDateTime now = LocalDateTime.now();
+        final LocalDateTime start = (rangeStart != null) ? rangeStart : now;
+        final LocalDateTime end = (rangeEnd != null) ? rangeEnd : now.plusYears(100);
+
+        if (start.isAfter(end)) {
             throw new BadRequestException("Параметр rangeStart не может быть позже rangeEnd");
         }
+
         return eventService.searchPublic(
-                text, categories, paid, rangeStart, rangeEnd, onlyAvailable, sort, from, size, request
+                text, categories, paid, start, end, onlyAvailable, sort, from, size, request
         );
     }
 

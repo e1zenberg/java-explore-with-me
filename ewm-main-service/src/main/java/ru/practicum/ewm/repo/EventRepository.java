@@ -26,7 +26,8 @@ public interface EventRepository extends JpaRepository<Event, Long> {
              or lower(e.description) like lower(concat('%', :text, '%'))
           ))
           and (:paid is null or e.paid = :paid)
-          and e.eventDate between :start and :end
+          and (:start is null or e.eventDate >= :start)
+          and (:end   is null or e.eventDate <= :end)
         """)
     List<Event> searchPublicNoCategories(@Param("text") String text,
                                          @Param("paid") Boolean paid,
@@ -43,7 +44,8 @@ public interface EventRepository extends JpaRepository<Event, Long> {
           ))
           and (:paid is null or e.paid = :paid)
           and (:categories is null or e.category.id in :categories)
-          and e.eventDate between :start and :end
+          and (:start is null or e.eventDate >= :start)
+          and (:end   is null or e.eventDate <= :end)
         """)
     List<Event> searchPublicWithCategories(@Param("text") String text,
                                            @Param("paid") Boolean paid,
@@ -57,7 +59,8 @@ public interface EventRepository extends JpaRepository<Event, Long> {
         where (:users is null or e.initiator.id in :users)
           and (:states is null or e.state in :states)
           and (:categories is null or e.category.id in :categories)
-          and e.eventDate between :start and :end
+          and (:start is null or e.eventDate >= :start)
+          and (:end   is null or e.eventDate <= :end)
         """)
     List<Event> searchAdmin(@Param("users") List<Long> users,
                             @Param("states") List<EventState> states,
