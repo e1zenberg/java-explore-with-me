@@ -23,9 +23,7 @@ public class StatsFacade {
 
     public void hit(HttpServletRequest req) {
         try {
-            String xff = req.getHeader("X-Forwarded-For");
-            String ip = xff != null && !xff.isBlank() ? xff.split(",")[0].trim() : req.getRemoteAddr();
-            statsClient.hit("ewm-main-service", req.getRequestURI(), ip, LocalDateTime.now());
+            statsClient.hit("ewm-main-service", req.getRequestURI(), req.getRemoteAddr(), LocalDateTime.now());
         } catch (Exception ex) {
             log.debug("Stats hit failed", ex);
         }

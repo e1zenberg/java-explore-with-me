@@ -152,17 +152,8 @@ public class EventService {
             log.debug("Stats hit failed", ex);
         }
 
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime start;
-        LocalDateTime end;
-
-        if (rangeStart == null && rangeEnd == null) {
-            start = now;
-            end = now.plusYears(100);
-        } else {
-            start = rangeStart != null ? rangeStart : now;
-            end = rangeEnd != null ? rangeEnd : now.plusYears(100);
-        }
+        LocalDateTime start = rangeStart != null ? rangeStart : LocalDateTime.now().minusYears(100);
+        LocalDateTime end = rangeEnd != null ? rangeEnd : LocalDateTime.now().plusYears(100);
 
         Sort springSort = "EVENT_DATE".equalsIgnoreCase(sort) ? Sort.by("eventDate").ascending() : Sort.unsorted();
         Pageable pageable = PageUtils.offsetPage(from, size, springSort);
@@ -174,10 +165,15 @@ public class EventService {
                     EventState.PUBLISHED, start, end, pageable
             );
         } else {
-            if (categories == null || categories.isEmpty()) {
-                events = eventRepository.searchPublicNoCategories(text, paid, start, end, pageable);
-            } else {
-                events = eventRepository.searchPublicWithCategories(text, paid, categories, start, end, pageable);
+            try {
+                if (categories == null || categories.isEmpty()) {
+                    events = eventRepository.searchPublicNoCategories(text, paid, start, end, pageable);
+                } else {
+                    events = eventRepository.searchPublicWithCategories(text, paid, categories, start, end, pageable);
+                }
+            } catch (Exception ex) {
+                log.debug("Public search failed, returning empty list", ex);
+                events = List.of();
             }
         }
 
