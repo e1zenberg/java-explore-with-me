@@ -45,19 +45,12 @@ public class PublicEventController {
                                     @RequestParam(defaultValue = "0") @Min(0) Integer from,
                                     @RequestParam(defaultValue = "10") @Positive Integer size,
                                     HttpServletRequest request) {
-        try {
-            if (rangeStart != null && rangeEnd != null && rangeStart.isAfter(rangeEnd)) {
-                throw new BadRequestException("Параметр rangeStart не может быть позже rangeEnd");
-            }
-            return eventService.searchPublic(
-                    text, categories, paid, rangeStart, rangeEnd, onlyAvailable, sort, from, size, request
-            );
-        } catch (BadRequestException ex) {
-            throw ex;
-        } catch (Exception ex) {
-            log.debug("Public /events failed", ex);
-            return List.of();
+        if (rangeStart != null && rangeEnd != null && rangeStart.isAfter(rangeEnd)) {
+            throw new BadRequestException("Параметр rangeStart не может быть позже rangeEnd");
         }
+        return eventService.searchPublic(
+                text, categories, paid, rangeStart, rangeEnd, onlyAvailable, sort, from, size, request
+        );
     }
 
     @GetMapping("/{id}")
