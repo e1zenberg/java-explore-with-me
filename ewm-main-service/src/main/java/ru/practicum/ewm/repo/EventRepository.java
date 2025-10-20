@@ -19,8 +19,7 @@ public interface EventRepository extends JpaRepository<Event, Long> {
                                                Pageable pageable);
 
     @Query("""
-        select e
-        from Event e
+        select e from Event e
         where e.state = ru.practicum.ewm.model.EventState.PUBLISHED
           and (:text is null or (
                 lower(e.annotation) like lower(concat('%', :text, '%'))
@@ -36,8 +35,7 @@ public interface EventRepository extends JpaRepository<Event, Long> {
                                          Pageable pageable);
 
     @Query("""
-        select e
-        from Event e
+        select e from Event e
         where e.state = ru.practicum.ewm.model.EventState.PUBLISHED
           and (:text is null or (
                 lower(e.annotation) like lower(concat('%', :text, '%'))
@@ -55,8 +53,7 @@ public interface EventRepository extends JpaRepository<Event, Long> {
                                            Pageable pageable);
 
     @Query("""
-        select e
-        from Event e
+        select e from Event e
         where (:users is null or e.initiator.id in :users)
           and (:states is null or e.state in :states)
           and (:categories is null or e.category.id in :categories)

@@ -27,7 +27,6 @@ import ru.practicum.ewm.service.EventService;
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
 @RequestMapping("/admin/events")
 public class AdminEventController {
-
     EventService eventService;
 
     @GetMapping
@@ -35,11 +34,9 @@ public class AdminEventController {
                                      @RequestParam(required = false) List<EventState> states,
                                      @RequestParam(required = false) List<Long> categories,
                                      @RequestParam(required = false)
-                                     @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-                                     LocalDateTime rangeStart,
+                                     @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime rangeStart,
                                      @RequestParam(required = false)
-                                     @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-                                     LocalDateTime rangeEnd,
+                                     @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime rangeEnd,
                                      @RequestParam(defaultValue = "0") @Min(0) Integer from,
                                      @RequestParam(defaultValue = "10") @Positive Integer size) {
         return eventService.searchAdmin(users, states, categories, rangeStart, rangeEnd, from, size);

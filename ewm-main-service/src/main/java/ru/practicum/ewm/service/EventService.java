@@ -98,7 +98,6 @@ public class EventService {
                 default -> throw new ForbiddenException("Недопустимое действие: " + dto.getStateAction());
             }
         }
-
         Event saved = eventRepository.save(e);
         return withFullViews(saved);
     }
@@ -106,6 +105,7 @@ public class EventService {
     @Transactional
     public EventFullDto updateByAdmin(Long eventId, UpdateEventAdminRequest dto) {
         Event e = getOr404(eventId);
+
         if (dto.getEventDate() != null) {
             validateEventDateAtLeast2Hours(dto.getEventDate(), false);
         }
@@ -117,6 +117,10 @@ public class EventService {
                 case "PUBLISH_EVENT" -> {
                     if (e.getState() != EventState.PENDING) {
                         throw new ConflictException("Опубликовать можно только событие в статусе PENDING");
+                    }
+                    // ВАЖНО: правило «минимум 1 час до начала»
+                    if (e.getEventDate().isBefore(LocalDateTime.now().plusHours(1))) {
+                        throw new ConflictException("Дата начала события должна быть не ранее чем через 1 час от публикации");
                     }
                     e.setState(EventState.PUBLISHED);
                     e.setPublishedOn(LocalDateTime.now());
@@ -155,7 +159,6 @@ public class EventService {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime start;
         LocalDateTime end;
-
         if (rangeStart == null && rangeEnd == null) {
             start = now;
             end = now.plusYears(100);
@@ -294,9 +297,7 @@ public class EventService {
     }
 
     private Map<Long, Long> viewsByEvent(List<Event> events) {
-        if (events.isEmpty()) {
-            return Map.of();
-        }
+        if (events.isEmpty()) return Map.of();
         Set<Long> ids = events.stream().map(Event::getId).collect(Collectors.toSet());
         try {
             return stats.getViewsForEvents(ids, LocalDateTime.now().minusYears(5), LocalDateTime.now().plusYears(5));
