@@ -34,10 +34,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ConstraintViolationException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiError handleConstraintViolation(ConstraintViolationException ex) {
+        String message = ConstraintViolationMessageBuilder.buildMessage(ex);
         return ApiError.builder()
                 .status("BAD_REQUEST")
                 .reason("Некорректный запрос.")
-                .message(ex.getMessage())
+                .message(message)
                 .timestamp(LocalDateTime.now())
                 .build();
     }

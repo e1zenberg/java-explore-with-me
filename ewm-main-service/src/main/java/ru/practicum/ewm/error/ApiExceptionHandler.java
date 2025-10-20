@@ -68,10 +68,21 @@ public class ApiExceptionHandler {
     })
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiError handleValidation(Exception ex) {
+        String message;
+        if (ex instanceof ConstraintViolationException violationException) {
+            message = ConstraintViolationMessageBuilder.buildMessage(violationException);
+        } else if (ex instanceof MethodArgumentNotValidException manv) {
+            message = manv.getBindingResult().getFieldErrors().stream()
+                    .findFirst()
+                    .map(fieldError -> fieldError.getField() + ": " + fieldError.getDefaultMessage())
+                    .orElse(ex.getMessage());
+        } else {
+            message = ex.getMessage();
+        }
         return ApiError.builder()
                 .status("BAD_REQUEST")
                 .reason("Некорректный запрос.")
-                .message(ex.getMessage())
+                .message(message)
                 .timestamp(LocalDateTime.now())
                 .build();
     }
