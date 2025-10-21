@@ -91,7 +91,7 @@ public class RequestService {
             throw new NotFoundException("Событие не найдено для пользователя");
         }
 
-        if ("CONFIRMED".equalsIgnoreCase(body.getStatus())) {
+        if (body.getStatus() == EventRequestStatusUpdateRequest.Status.CONFIRMED) {
             long confirmedCount = requestRepository.countByEventIdAndStatus(eventId, RequestStatus.CONFIRMED);
             if (e.getParticipantLimit() != 0 && confirmedCount >= e.getParticipantLimit()) {
                 throw new ConflictException("Лимит участников достигнут");
@@ -107,7 +107,7 @@ public class RequestService {
             if (r.getStatus() != RequestStatus.PENDING) {
                 throw new ConflictException("Обновлять можно только заявки в статусе PENDING");
             }
-            if ("CONFIRMED".equalsIgnoreCase(body.getStatus())) {
+            if (body.getStatus() == EventRequestStatusUpdateRequest.Status.CONFIRMED) {
                 long count = requestRepository.countByEventIdAndStatus(eventId, RequestStatus.CONFIRMED);
                 if (e.getParticipantLimit() != 0 && count >= e.getParticipantLimit()) {
                     r.setStatus(RequestStatus.REJECTED);
@@ -116,11 +116,9 @@ public class RequestService {
                     r.setStatus(RequestStatus.CONFIRMED);
                     confirmed.add(r);
                 }
-            } else if ("REJECTED".equalsIgnoreCase(body.getStatus())) {
+            } else if (body.getStatus() == EventRequestStatusUpdateRequest.Status.REJECTED) {
                 r.setStatus(RequestStatus.REJECTED);
                 rejected.add(r);
-            } else {
-                throw new ConflictException("Неизвестный статус: " + body.getStatus());
             }
         }
 

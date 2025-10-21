@@ -31,16 +31,16 @@ public class CompilationService {
     StatsFacade stats;
 
     public CompilationDto create(NewCompilationDto dto) {
-        Compilation c = new Compilation();
-        c.setPinned(Boolean.TRUE.equals(dto.getPinned()));
-        c.setTitle(dto.getTitle());
+        Compilation compilation = new Compilation();
+        compilation.setPinned(Boolean.TRUE.equals(dto.getPinned()));
+        compilation.setTitle(dto.getTitle());
         if (dto.getEvents() != null && !dto.getEvents().isEmpty()) {
             Set<Event> events = dto.getEvents().stream()
                     .map(eventService::getOr404)
                     .collect(Collectors.toCollection(LinkedHashSet::new));
-            c.setEvents(events);
+            compilation.setEvents(events);
         }
-        Compilation saved = compilationRepository.save(c);
+        Compilation saved = compilationRepository.save(compilation);
         return toDto(saved);
     }
 
@@ -49,25 +49,29 @@ public class CompilationService {
     }
 
     public CompilationDto update(Long id, UpdateCompilationRequest dto) {
-        Compilation c = getOr404(id);
-        if (dto.getPinned() != null) c.setPinned(dto.getPinned());
-        if (dto.getTitle() != null) c.setTitle(dto.getTitle());
+        Compilation compilation = getOr404(id);
+        if (dto.getPinned() != null) {
+            compilation.setPinned(dto.getPinned());
+        }
+        if (dto.getTitle() != null) {
+            compilation.setTitle(dto.getTitle());
+        }
         if (dto.getEvents() != null) {
             Set<Event> events = dto.getEvents().stream()
                     .map(eventService::getOr404)
                     .collect(Collectors.toCollection(LinkedHashSet::new));
-            c.setEvents(events);
+            compilation.setEvents(events);
         }
-        return toDto(compilationRepository.save(c));
+        return toDto(compilationRepository.save(compilation));
     }
 
     public List<CompilationDto> list(Boolean pinned, int from, int size) {
-        List<Compilation> comps = compilationRepository.findAll().stream()
-                .filter(c -> pinned == null || c.getPinned().equals(pinned))
+        List<Compilation> compilations = compilationRepository.findAll().stream()
+                .filter(comp -> pinned == null || comp.getPinned().equals(pinned))
                 .toList();
-        int start = Math.min(from, comps.size());
-        int end = Math.min(from + size, comps.size());
-        return comps.subList(start, end).stream().map(this::toDto).toList();
+        int start = Math.min(from, compilations.size());
+        int end = Math.min(from + size, compilations.size());
+        return compilations.subList(start, end).stream().map(this::toDto).toList();
     }
 
     public CompilationDto getById(Long id) {
@@ -79,17 +83,17 @@ public class CompilationService {
                 .orElseThrow(() -> new NotFoundException("Подборка не найдена: " + id));
     }
 
-    private CompilationDto toDto(Compilation c) {
-        Set<Long> ids = c.getEvents().stream().map(Event::getId).collect(Collectors.toSet());
-        Map<Long, Long> views = ids.isEmpty()
+    private CompilationDto toDto(Compilation compilation) {
+        Set<Long> eventIds = compilation.getEvents().stream().map(Event::getId).collect(Collectors.toSet());
+        Map<Long, Long> views = eventIds.isEmpty()
                 ? Map.of()
-                : stats.getViewsForEvents(ids, LocalDateTime.now().minusYears(5), LocalDateTime.now().plusYears(5));
+                : stats.getViewsForEvents(eventIds, LocalDateTime.now().minusYears(5), LocalDateTime.now().plusYears(5));
 
         Map<Long, Long> confirmed = new HashMap<>();
-        for (Long id : ids) {
-            long cnt = requestRepository.countByEventIdAndStatus(id, RequestStatus.CONFIRMED);
-            confirmed.put(id, cnt);
+        for (Long eventId : eventIds) {
+            long count = requestRepository.countByEventIdAndStatus(eventId, RequestStatus.CONFIRMED);
+            confirmed.put(eventId, count);
         }
-        return CompilationMapper.toDto(c, views, confirmed);
+        return CompilationMapper.toDto(compilation, views, confirmed);
     }
 }

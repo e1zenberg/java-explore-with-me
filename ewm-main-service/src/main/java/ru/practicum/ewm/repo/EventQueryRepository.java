@@ -21,7 +21,7 @@ import java.util.List;
 public class EventQueryRepository {
 
     @PersistenceContext
-    private EntityManager em;
+    private EntityManager entityManager;
 
     public List<Event> searchPublic(String text,
                                     List<Long> categories,
@@ -29,30 +29,30 @@ public class EventQueryRepository {
                                     LocalDateTime rangeStart,
                                     LocalDateTime rangeEnd,
                                     Pageable pageable) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<Event> cq = cb.createQuery(Event.class);
-        Root<Event> root = cq.from(Event.class);
+        CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
+        CriteriaQuery<Event> criteriaQuery = criteriaBuilder.createQuery(Event.class);
+        Root<Event> eventRoot = criteriaQuery.from(Event.class);
 
         List<Predicate> predicates = new ArrayList<>();
-        predicates.add(cb.equal(root.get("state"), EventState.PUBLISHED));
+        predicates.add(criteriaBuilder.equal(eventRoot.get("state"), EventState.PUBLISHED));
 
         if (text != null && !text.isBlank()) {
             String pattern = "%" + text.toLowerCase() + "%";
-            Predicate byAnnotation = cb.like(cb.lower(root.get("annotation")), pattern);
-            Predicate byDescription = cb.like(cb.lower(root.get("description")), pattern);
-            predicates.add(cb.or(byAnnotation, byDescription));
+            Predicate byAnnotation = criteriaBuilder.like(criteriaBuilder.lower(eventRoot.get("annotation")), pattern);
+            Predicate byDescription = criteriaBuilder.like(criteriaBuilder.lower(eventRoot.get("description")), pattern);
+            predicates.add(criteriaBuilder.or(byAnnotation, byDescription));
         }
         if (paid != null) {
-            predicates.add(cb.equal(root.get("paid"), paid));
+            predicates.add(criteriaBuilder.equal(eventRoot.get("paid"), paid));
         }
-        applyDateAndCategoryFilters(cb, root, predicates, categories, rangeStart, rangeEnd);
+        applyDateAndCategoryFilters(criteriaBuilder, eventRoot, predicates, categories, rangeStart, rangeEnd);
 
-        cq.where(predicates.toArray(new Predicate[0]));
-        applySorting(cb, cq, root, pageable, "eventDate");
+        criteriaQuery.where(predicates.toArray(new Predicate[0]));
+        applySorting(criteriaBuilder, criteriaQuery, eventRoot, pageable, "eventDate");
 
-        TypedQuery<Event> q = em.createQuery(cq);
-        applyPaging(q, pageable);
-        return q.getResultList();
+        TypedQuery<Event> query = entityManager.createQuery(criteriaQuery);
+        applyPaging(query, pageable);
+        return query.getResultList();
     }
 
     public List<Event> searchAdmin(List<Long> users,
@@ -61,29 +61,29 @@ public class EventQueryRepository {
                                    LocalDateTime rangeStart,
                                    LocalDateTime rangeEnd,
                                    Pageable pageable) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<Event> cq = cb.createQuery(Event.class);
-        Root<Event> root = cq.from(Event.class);
+        CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
+        CriteriaQuery<Event> criteriaQuery = criteriaBuilder.createQuery(Event.class);
+        Root<Event> eventRoot = criteriaQuery.from(Event.class);
 
         List<Predicate> predicates = new ArrayList<>();
 
         if (users != null && !users.isEmpty()) {
-            predicates.add(root.get("initiator").get("id").in(users));
+            predicates.add(eventRoot.get("initiator").get("id").in(users));
         }
         if (states != null && !states.isEmpty()) {
-            predicates.add(root.get("state").in(states));
+            predicates.add(eventRoot.get("state").in(states));
         }
-        applyDateAndCategoryFilters(cb, root, predicates, categories, rangeStart, rangeEnd);
+        applyDateAndCategoryFilters(criteriaBuilder, eventRoot, predicates, categories, rangeStart, rangeEnd);
 
-        cq.where(predicates.toArray(new Predicate[0]));
-        applySorting(cb, cq, root, pageable, "id");
+        criteriaQuery.where(predicates.toArray(new Predicate[0]));
+        applySorting(criteriaBuilder, criteriaQuery, eventRoot, pageable, "id");
 
-        TypedQuery<Event> q = em.createQuery(cq);
-        applyPaging(q, pageable);
-        return q.getResultList();
+        TypedQuery<Event> query = entityManager.createQuery(criteriaQuery);
+        applyPaging(query, pageable);
+        return query.getResultList();
     }
 
-    private void applyDateAndCategoryFilters(CriteriaBuilder cb,
+    private void applyDateAndCategoryFilters(CriteriaBuilder builder,
                                              Root<Event> root,
                                              List<Predicate> predicates,
                                              List<Long> categories,
@@ -93,34 +93,35 @@ public class EventQueryRepository {
             predicates.add(root.get("category").get("id").in(categories));
         }
         if (rangeStart != null) {
-            predicates.add(cb.greaterThanOrEqualTo(root.get("eventDate"), rangeStart));
+            predicates.add(builder.greaterThanOrEqualTo(root.get("eventDate"), rangeStart));
         }
         if (rangeEnd != null) {
-            predicates.add(cb.lessThanOrEqualTo(root.get("eventDate"), rangeEnd));
+            predicates.add(builder.lessThanOrEqualTo(root.get("eventDate"), rangeEnd));
         }
     }
 
-    private void applySorting(CriteriaBuilder cb,
-                              CriteriaQuery<Event> cq,
+    private void applySorting(CriteriaBuilder builder,
+                              CriteriaQuery<Event> query,
                               Root<Event> root,
                               Pageable pageable,
                               String defaultProperty) {
         Sort sort = pageable == null ? Sort.unsorted() : pageable.getSort();
         if (sort.isSorted()) {
             List<jakarta.persistence.criteria.Order> orders = new ArrayList<>();
-            for (Sort.Order o : sort) {
-                orders.add(o.isAscending() ? cb.asc(root.get(o.getProperty())) : cb.desc(root.get(o.getProperty())));
+            for (Sort.Order order : sort) {
+                orders.add(order.isAscending() ? builder.asc(root.get(order.getProperty()))
+                        : builder.desc(root.get(order.getProperty())));
             }
-            cq.orderBy(orders.toArray(new jakarta.persistence.criteria.Order[0]));
+            query.orderBy(orders.toArray(new jakarta.persistence.criteria.Order[0]));
         } else {
-            cq.orderBy(cb.asc(root.get(defaultProperty)));
+            query.orderBy(builder.asc(root.get(defaultProperty)));
         }
     }
 
-    private void applyPaging(TypedQuery<?> q, Pageable pageable) {
+    private void applyPaging(TypedQuery<?> query, Pageable pageable) {
         if (pageable != null && pageable.isPaged()) {
-            q.setFirstResult((int) pageable.getOffset());
-            q.setMaxResults(pageable.getPageSize());
+            query.setFirstResult((int) pageable.getOffset());
+            query.setMaxResults(pageable.getPageSize());
         }
     }
 }
