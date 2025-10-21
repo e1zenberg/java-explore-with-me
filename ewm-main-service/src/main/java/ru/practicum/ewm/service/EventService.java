@@ -31,6 +31,7 @@ import ru.practicum.ewm.model.Event;
 import ru.practicum.ewm.model.EventState;
 import ru.practicum.ewm.model.RequestStatus;
 import ru.practicum.ewm.model.User;
+import ru.practicum.ewm.repo.EventQueryRepository;
 import ru.practicum.ewm.repo.EventRepository;
 import ru.practicum.ewm.repo.ParticipationRequestRepository;
 import ru.practicum.ewm.stats.StatsFacade;
@@ -47,6 +48,7 @@ public class EventService {
     UserService userService;
     CategoryService categoryService;
     StatsFacade stats;
+    EventQueryRepository eventQueryRepository;
 
     @Transactional
     public EventFullDto create(Long userId, NewEventDto dto) {
@@ -155,7 +157,6 @@ public class EventService {
             log.debug("Stats hit failed", ex);
         }
 
-        // Валидация, но без принудительной нормализации дат — оставляем null, если не заданы.
         if (rangeStart != null && rangeEnd != null && rangeStart.isAfter(rangeEnd)) {
             throw new BadRequestException("rangeStart не может быть позже rangeEnd");
         }
@@ -163,48 +164,38 @@ public class EventService {
         boolean sortByViews = "VIEWS".equalsIgnoreCase(sort);
         boolean needFullScan = sortByViews || Boolean.TRUE.equals(onlyAvailable);
 
-        if (!needFullScan) {
-            Sort springSort = Sort.by("eventDate").ascending();
-            Pageable pageable = PageUtils.offsetPage(from, size, springSort);
+        Sort springSort = Sort.by("eventDate").ascending();
+        Pageable pageable = needFullScan ? Pageable.unpaged() : PageUtils.offsetPage(from, size, springSort);
 
-            List<Event> page;
-            if (categories == null || categories.isEmpty()) {
-                page = eventRepository.searchPublicNoCategories(text, paid, rangeStart, rangeEnd, pageable);
-            } else {
-                page = eventRepository.searchPublicWithCategories(text, paid, categories, rangeStart, rangeEnd, pageable);
-            }
-            return withShortViews(page);
-        }
-
-        // Тяжёлая ветка: тянем все, затем фильтруем и сортируем вручную.
-        Pageable unpaged = Pageable.unpaged();
-        List<Event> all = (categories == null || categories.isEmpty())
-                ? eventRepository.searchPublicNoCategories(text, paid, rangeStart, rangeEnd, unpaged)
-                : eventRepository.searchPublicWithCategories(text, paid, categories, rangeStart, rangeEnd, unpaged);
+        List<Event> base = eventQueryRepository.searchPublic(
+                text, categories, paid, rangeStart, rangeEnd, pageable
+        );
 
         if (Boolean.TRUE.equals(onlyAvailable)) {
-            Map<Long, Long> confirmed = confirmedByEvent(all);
-            all = all.stream().filter(ev -> {
+            Map<Long, Long> confirmed = confirmedByEvent(base);
+            base = base.stream().filter(ev -> {
                 long conf = confirmed.getOrDefault(ev.getId(), 0L);
                 return ev.getParticipantLimit() == 0 || conf < ev.getParticipantLimit();
             }).toList();
         }
 
         if (sortByViews) {
-            Map<Long, Long> viewsMap = viewsByEvent(all);
-            all = all.stream()
+            Map<Long, Long> viewsMap = viewsByEvent(base);
+            base = base.stream()
                     .sorted(Comparator
                             .comparingLong((Event ev) -> viewsMap.getOrDefault(ev.getId(), 0L))
                             .reversed()
                             .thenComparing(Event::getEventDate))
                     .toList();
-        } else {
-            all = all.stream().sorted(Comparator.comparing(Event::getEventDate)).toList();
         }
 
-        int startIndex = Math.min(from, all.size());
-        int endIndex = Math.min(startIndex + size, all.size());
-        List<Event> slice = all.subList(startIndex, endIndex);
+        if (!needFullScan) {
+            return withShortViews(base);
+        }
+
+        int startIndex = Math.min(from, base.size());
+        int endIndex = Math.min(startIndex + size, base.size());
+        List<Event> slice = base.subList(startIndex, endIndex);
         return withShortViews(slice);
     }
 
@@ -231,7 +222,7 @@ public class EventService {
                                           int from,
                                           int size) {
         Pageable pageable = PageUtils.offsetPage(from, size, Sort.by("id").ascending());
-        List<Event> events = eventRepository.searchAdmin(users, states, categories, rangeStart, rangeEnd, pageable);
+        List<Event> events = eventQueryRepository.searchAdmin(users, states, categories, rangeStart, rangeEnd, pageable);
         return withFullViews(events);
     }
 
