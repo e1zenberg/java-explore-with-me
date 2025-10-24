@@ -68,4 +68,9 @@ public interface EventRepository extends JpaRepository<Event, Long> {
                             @Param("start") LocalDateTime start,
                             @Param("end") LocalDateTime end,
                             Pageable pageable);
+
+    List<Event> findByInitiator_IdInAndStateAndEventDateAfter(List<Long> initiatorIds,
+                                                              EventState state,
+                                                              LocalDateTime after,
+                                                              Pageable pageable);
 }
