@@ -1,8 +1,8 @@
 {
   "info": {
-    "name": "Subscriptions Feature (Postman)",
+    "name": "Subscriptions Feature (Postman) - Fixed Order",
     "_postman_id": "7c7d5a4e-2c3b-4a3f-bf11-aaaabbbbcccc",
-    "description": "Коллекция для проверки фитчи подписок и ленты событий подписок.",
+    "description": "Исправлено: публикация события выполняется ПОСЛЕ его создания. Коллекция для проверки фитчи подписок и ленты событий подписок.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -134,48 +134,6 @@
               }
             }
           ]
-        },
-        {
-          "name": "Admin publishes Event",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/admin/events/{{eventId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "admin",
-                "events",
-                "{{eventId}}"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\"stateAction\":\"PUBLISH_EVENT\"}"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Event published', function(){",
-                  "  pm.response.to.have.status(200);",
-                  "  var json = pm.response.json();",
-                  "  pm.expect(json.state).to.eql('PUBLISHED');",
-                  "});"
-                ]
-              }
-            }
-          ]
         }
       ]
     },
@@ -234,6 +192,48 @@
               "raw": "{\"annotation\":\"Live concert announcement with special guests\",\"category\":{{categoryId}},\"description\":\"A great live music event.\",\"eventDate\":\"{{futureDate}}\",\"location\":{\"lat\":55.751244,\"lon\":37.618423},\"paid\":false,\"participantLimit\":0,\"requestModeration\":false,\"title\":\"Live Concert\"}"
             }
           }
+        },
+        {
+          "name": "Admin publishes Event (after creation)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/events/{{eventId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "events",
+                "{{eventId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"stateAction\":\"PUBLISH_EVENT\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Event published', function(){",
+                  "  pm.response.to.have.status(200);",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json.state).to.eql('PUBLISHED');",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
