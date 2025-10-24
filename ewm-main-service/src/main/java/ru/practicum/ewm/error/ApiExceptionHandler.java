@@ -1,0 +1,127 @@
+package ru.practicum.ewm.error;
+
+import jakarta.validation.ConstraintViolationException;
+import java.time.LocalDateTime;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import ru.practicum.ewm.dto.ApiError;
+
+@RestControllerAdvice
+public class ApiExceptionHandler {
+
+    @ExceptionHandler(BadRequestException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ApiError handleBadRequest(BadRequestException ex) {
+        return ApiError.builder()
+                .status("BAD_REQUEST")
+                .reason("Некорректный запрос.")
+                .message(ex.getMessage())
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+
+    @ExceptionHandler(ForbiddenException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public ApiError handleForbidden(ForbiddenException ex) {
+        return ApiError.builder()
+                .status("FORBIDDEN")
+                .reason("Доступ запрещён.")
+                .message(ex.getMessage())
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+
+    @ExceptionHandler(NotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ApiError handleNotFound(NotFoundException ex) {
+        return ApiError.builder()
+                .status("NOT_FOUND")
+                .reason("Объект не найден.")
+                .message(ex.getMessage())
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ApiError handleConflict(ConflictException ex) {
+        return ApiError.builder()
+                .status("CONFLICT")
+                .reason("Нарушение целостности данных.")
+                .message(ex.getMessage())
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+
+    @ExceptionHandler({
+            MethodArgumentNotValidException.class,
+            ConstraintViolationException.class,
+            MissingServletRequestParameterException.class,
+            MethodArgumentTypeMismatchException.class
+    })
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ApiError handleValidation(Exception ex) {
+        String message;
+        if (ex instanceof ConstraintViolationException violationException) {
+            message = ConstraintViolationMessageBuilder.buildMessage(violationException);
+        } else if (ex instanceof MethodArgumentNotValidException manv) {
+            message = manv.getBindingResult().getFieldErrors().stream()
+                    .findFirst()
+                    .map(fieldError -> fieldError.getField() + ": " + fieldError.getDefaultMessage())
+                    .orElse(ex.getMessage());
+        } else {
+            message = ex.getMessage();
+        }
+        return ApiError.builder()
+                .status("BAD_REQUEST")
+                .reason("Некорректный запрос.")
+                .message(message)
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ApiError handleNoBody(HttpMessageNotReadableException ex) {
+        String msg = ex.getMessage() != null
+                ? ex.getMessage()
+                : "Тело запроса отсутствует или не читается.";
+        return ApiError.builder()
+                .status("BAD_REQUEST")
+                .reason("Некорректный запрос.")
+                .message(msg)
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ApiError handleDataIntegrity(DataIntegrityViolationException ex) {
+        String causeMsg = ex.getMostSpecificCause().getMessage();
+        String msg = (causeMsg != null && !causeMsg.isBlank()) ? causeMsg : ex.getMessage();
+        return ApiError.builder()
+                .status("CONFLICT")
+                .reason("Нарушение целостности данных.")
+                .message(msg)
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+
+    @ExceptionHandler(Exception.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public ApiError handleOther(Exception ex) {
+        return ApiError.builder()
+                .status("INTERNAL_SERVER_ERROR")
+                .reason("Внутренняя ошибка сервера.")
+                .message(ex.getMessage())
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+}
