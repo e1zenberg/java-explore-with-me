@@ -245,7 +245,7 @@ public class EventService {
 
     public Event getOr404(Long id) {
         return eventRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Событие не найдено: " + id));
+                .orElseThrow(() -> new NotFoundException(String.format("Событие не найдено: %d", id)));
     }
 
     private void validateEventDateAtLeast2Hours(LocalDateTime dt, boolean creation) {

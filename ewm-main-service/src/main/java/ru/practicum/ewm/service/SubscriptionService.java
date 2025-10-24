@@ -43,9 +43,9 @@ public class SubscriptionService {
 
     @Transactional
     public void unsubscribe(Long followerId, Long targetId) {
-        Subscription s = subscriptionRepository.findByFollowerIdAndTargetId(followerId, targetId)
+        Subscription subscription = subscriptionRepository.findByFollowerIdAndTargetId(followerId, targetId)
                 .orElseThrow(() -> new NotFoundException("Подписка не найдена"));
-        subscriptionRepository.delete(s);
+        subscriptionRepository.delete(subscription);
     }
 
     public List<UserDto> getSubscriptions(Long followerId) {
