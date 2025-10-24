@@ -34,6 +34,7 @@ import ru.practicum.ewm.model.User;
 import ru.practicum.ewm.repo.EventQueryRepository;
 import ru.practicum.ewm.repo.EventRepository;
 import ru.practicum.ewm.repo.ParticipationRequestRepository;
+import ru.practicum.ewm.repo.SubscriptionRepository;
 import ru.practicum.ewm.stats.StatsFacade;
 import ru.practicum.ewm.util.PageUtils;
 
@@ -49,6 +50,7 @@ public class EventService {
     CategoryService categoryService;
     StatsFacade stats;
     EventQueryRepository eventQueryRepository;
+    SubscriptionRepository subscriptionRepository;
 
     @Transactional
     public EventFullDto create(Long userId, NewEventDto dto) {
@@ -226,9 +228,24 @@ public class EventService {
         return withFullViews(events);
     }
 
+    @Transactional(readOnly = true)
+    public List<EventShortDto> getFeed(Long userId, int from, int size) {
+        List<Long> targets = subscriptionRepository.findAllByFollowerId(userId).stream()
+                .map(s -> s.getTarget().getId())
+                .toList();
+        if (targets.isEmpty()) {
+            return List.of();
+        }
+        Pageable pageable = PageUtils.offsetPage(from, size, Sort.by("eventDate").ascending());
+        List<Event> events = eventRepository.findByInitiator_IdInAndStateAndEventDateAfter(
+                targets, EventState.PUBLISHED, LocalDateTime.now(), pageable
+        );
+        return withShortViews(events);
+    }
+
     public Event getOr404(Long id) {
         return eventRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Событие не найдено: " + id));
+                .orElseThrow(() -> new NotFoundException(String.format("Событие не найдено: %d", id)));
     }
 
     private void validateEventDateAtLeast2Hours(LocalDateTime dt, boolean creation) {

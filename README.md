@@ -1,1 +1,1 @@
- Pull: https://github.com/e1zenberg/java-explore-with-me/pull/5
+https://github.com/e1zenberg/java-explore-with-me/pull/5
